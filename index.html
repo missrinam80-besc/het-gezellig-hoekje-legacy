@@ -28,10 +28,59 @@
       color: var(--chalk);
     }
 
+    .site-header-bar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 18px 24px;
+      background: rgba(18, 15, 13, 0.96);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(8px);
+    }
+
+    .site-header-title {
+      margin: 0;
+      font-size: 28px;
+      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .top-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .top-nav a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      color: var(--chalk);
+      text-decoration: none;
+      font-weight: 800;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(255,255,255,.04);
+    }
+
+    .top-nav a.active {
+      background: linear-gradient(180deg, #f0b04c, #d28a25);
+      color: #20130d;
+      border-color: transparent;
+    }
+
     .app {
       display: grid;
       grid-template-columns: 540px 1fr;
-      min-height: 100vh;
+      min-height: calc(100vh - 79px);
     }
 
     .controls {
@@ -546,6 +595,10 @@
     }
 
     @media (max-width: 1400px) {
+      .site-header-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
       .app { grid-template-columns: 1fr; }
       .controls { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.08); }
     }
@@ -567,6 +620,15 @@
   </style>
 </head>
 <body>
+  <header class="site-header-bar">
+    <h1 class="site-header-title">Het gezellig hoekje - menumaker</h1>
+    <nav class="top-nav" aria-label="Hoofdnavigatie">
+      <a href="#" class="active">Menu generator</a>
+      <a href="#">Recepten maker</a>
+      <a href="#">Winkellijstje</a>
+    </nav>
+  </header>
+
   <div class="app">
     <aside class="controls">
       <div class="panel-shell">
