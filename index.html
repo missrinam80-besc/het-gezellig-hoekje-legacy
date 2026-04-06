@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Menu Poster Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #1b1715;
+      --panel: #241d19;
+      --chalk: #f7f1e8;
+      --accent: #f0b04c;
+      --accent2: #8c5c36;
+      --muted: #d9c9b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Montserrat, Arial, sans-serif;
+      background: linear-gradient(135deg, #111, #201813);
+      color: var(--chalk);
+    }
+    .app {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      min-height: 100vh;
+    }
+    .controls {
+      background: #120f0d;
+      border-right: 1px solid rgba(255,255,255,.08);
+      padding: 20px;
+      overflow: auto;
+    }
+    h1, h2, h3 { margin: 0 0 12px; }
+    h1 { font-size: 28px; color: var(--accent); }
+    h2 { font-size: 18px; color: var(--muted); margin-top: 18px; }
+    p { line-height: 1.5; color: #dacdbf; }
+    label {
+      display: block;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #ccb6a2;
+      margin: 12px 0 6px;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      font: inherit;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    input, textarea, select {
+      padding: 12px 14px;
+      background: #201813;
+      color: #fff8ef;
+    }
+    textarea { min-height: 220px; resize: vertical; }
+    button {
+      padding: 13px 16px;
+      margin-top: 12px;
+      background: linear-gradient(180deg, #f0b04c, #d28a25);
+      color: #20130d;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .secondary {
+      background: #2c231e;
+      color: var(--chalk);
+    }
+    .hint {
+      font-size: 13px;
+      color: #bca28a;
+      margin-top: 8px;
+    }
+    .preview-wrap {
+      padding: 22px;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .poster {
+      width: 1080px;
+      min-height: 1920px;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.06), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(255,255,255,.03), transparent 26%),
+        linear-gradient(180deg, #2d221d 0%, #171210 100%);
+      border: 18px solid #5f3c21;
+      box-shadow: 0 24px 70px rgba(0,0,0,.5);
+      position: relative;
+      padding: 48px;
+    }
+    .poster:before {
+      content: "";
+      position: absolute; inset: 12px;
+      border: 2px solid rgba(240,176,76,.35);
+      pointer-events: none;
+    }
+    .header {
+      text-align: center;
+      padding: 10px 30px 30px;
+      border-bottom: 2px dashed rgba(247,241,232,.15);
+      margin-bottom: 30px;
+    }
+    .brand {
+      font-family: Lobster, cursive;
+      font-size: 80px;
+      color: var(--accent);
+      line-height: 1.05;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .tagline {
+      font-size: 24px;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .section {
+      background: rgba(0,0,0,.15);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 22px;
+      padding: 20px 22px;
+      min-height: 230px;
+    }
+    .section-title {
+      display: inline-block;
+      padding: 8px 18px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #6f4a2d, #4c311c);
+      color: #fff4e8;
+      font-family: Lobster, cursive;
+      font-size: 38px;
+      margin-bottom: 18px;
+    }
+    .item {
+      margin-bottom: 13px;
+    }
+    .item-name {
+      font-size: 31px;
+      color: var(--accent);
+      font-weight: 800;
+      line-height: 1.15;
+    }
+    .item-sub {
+      font-size: 23px;
+      color: var(--chalk);
+      opacity: .95;
+      margin-top: 2px;
+    }
+    .footer {
+      position: absolute;
+      left: 48px; right: 48px; bottom: 42px;
+      border-top: 2px dashed rgba(247,241,232,.15);
+      padding-top: 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      color: var(--muted);
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .pill {
+      border: 1px solid rgba(255,255,255,.1);
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.03);
+    }
+    @media (max-width: 1400px) {
+      .app { grid-template-columns: 1fr; }
+      .controls { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+      .poster { transform-origin: top center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="controls">
+      <h1>Menu Poster Generator</h1>
+      <p>Zet platte tekst om naar een krijtbord-poster. Vul je titel, ondertitel en menu in. Elke sectie start met <strong>#</strong>. Elk item is <strong>Naam | omschrijving</strong>.</p>
+
+      <label for="brand">Naam zaak</label>
+      <input id="brand" value="’t Gezellig Hoekje" />
+
+      <label for="subtitle">Ondertitel</label>
+      <input id="subtitle" value="Koffiebar & Gebak" />
+
+      <label for="tagline">Slogan</label>
+      <input id="tagline" value="Warm welkom op ’t gezelligste plekje van de stad!" />
+
+      <label for="footerLeft">Footer links</label>
+      <input id="footerLeft" value="Pillbox Hospital" />
+
+      <label for="footerRight">Footer rechts</label>
+      <input id="footerRight" value="Dagelijks vers & gezellig" />
+
+      <label for="layout">Lay-out</label>
+      <select id="layout">
+        <option value="2">2 kolommen</option>
+        <option value="1">1 kolom</option>
+      </select>
+
+      <label for="menuText">Menu tekst</label>
+      <textarea id="menuText"># Koffie
+De Klassieke Knuffel | Cappuccino
+De Snelle Shot | Espresso
+De Zachte Wolk | Latte
+
+# Thee
+De Warme Chai Droom | Chai
+De Frisse Opkikker | Muntthee
+De Britse Pauze | English Tea
+
+# Chocolademelk
+De Zoete Omhelzing | Met slagroom
+De Power Choco | Chocochino
+De Caramel Comfort | Met caramel
+
+# Donuts
+De Choco Ring | Chocolade
+De Berry Bliss | Aardbei
+De Vanille Droom | Vanille
+
+# Cupcakes
+Red Velvet Verleiding | Red velvet
+Blueberry Bliss | Blueberry
+Choco Crush | Chocolade
+
+# Tosti's
+De Italiaanse Smelt | Mozzarella
+De Pittige Kip | Kip tandoori
+De Mexicano Melt | Mexican pork</textarea>
+
+      <button id="generateBtn">Poster genereren</button>
+      <button id="downloadBtn" class="secondary">Download als PNG</button>
+      <div class="hint">Tip: voor een nieuw menu hoef je alleen de tekst in het menu-veld te vervangen.</div>
+    </aside>
+
+    <main class="preview-wrap">
+      <div id="poster" class="poster"></div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    function parseMenu(text) {
+      const lines = text.split(/\r?\n/);
+      const sections = [];
+      let current = null;
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) continue;
+        if (line.startsWith('#')) {
+          current = { title: line.replace(/^#+\s*/, ''), items: [] };
+          sections.push(current);
+          continue;
+        }
+        if (!current) continue;
+        const parts = line.split('|').map(s => s.trim());
+        current.items.push({ name: parts[0] || '', sub: parts[1] || '' });
+      }
+      return sections;
+    }
+
+    function buildPoster() {
+      const brand = document.getElementById('brand').value.trim();
+      const subtitle = document.getElementById('subtitle').value.trim();
+      const tagline = document.getElementById('tagline').value.trim();
+      const footerLeft = document.getElementById('footerLeft').value.trim();
+      const footerRight = document.getElementById('footerRight').value.trim();
+      const layout = document.getElementById('layout').value;
+      const sections = parseMenu(document.getElementById('menuText').value);
+      const poster = document.getElementById('poster');
+
+      poster.innerHTML = '';
+      const header = document.createElement('div');
+      header.className = 'header';
+      header.innerHTML = `
+        <div class="brand">${escapeHtml(brand)}</div>
+        <div class="subtitle">${escapeHtml(subtitle)}</div>
+        <div class="tagline">${escapeHtml(tagline)}</div>
+      `;
+      poster.appendChild(header);
+
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      grid.style.gridTemplateColumns = layout === '1' ? '1fr' : '1fr 1fr';
+
+      for (const section of sections) {
+        const block = document.createElement('section');
+        block.className = 'section';
+        const itemsHtml = section.items.map(item => `
+          <div class="item">
+            <div class="item-name">${escapeHtml(item.name)}</div>
+            ${item.sub ? `<div class="item-sub">${escapeHtml(item.sub)}</div>` : ''}
+          </div>`).join('');
+        block.innerHTML = `<div class="section-title">${escapeHtml(section.title)}</div>${itemsHtml}`;
+        grid.appendChild(block);
+      }
+      poster.appendChild(grid);
+
+      const footer = document.createElement('div');
+      footer.className = 'footer';
+      footer.innerHTML = `<div class="pill">${escapeHtml(footerLeft)}</div><div class="pill">${escapeHtml(footerRight)}</div>`;
+      poster.appendChild(footer);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    async function downloadPoster() {
+      const poster = document.getElementById('poster');
+      const canvas = await html2canvas(poster, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true
+      });
+      const link = document.createElement('a');
+      link.download = 'menu-poster.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    document.getElementById('generateBtn').addEventListener('click', buildPoster);
+    document.getElementById('downloadBtn').addEventListener('click', downloadPoster);
+    buildPoster();
+  </script>
+</body>
+</html>
