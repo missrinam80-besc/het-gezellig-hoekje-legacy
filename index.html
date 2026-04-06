@@ -3,320 +3,764 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Menu Poster Generator</title>
+  <title>Gezellig Hoekje Menu Generator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Montserrat:wght@400;600;700;800&family=Playfair+Display:wght@400;700;800&family=Permanent+Marker&family=Nunito:wght@400;700;800&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #1b1715;
-      --panel: #241d19;
+      --canvas-bg: #1b1715;
+      --panel: rgba(36, 29, 25, 0.88);
       --chalk: #f7f1e8;
       --accent: #f0b04c;
       --accent2: #8c5c36;
       --muted: #d9c9b8;
+      --font-display: 'Lobster', cursive;
+      --font-body: 'Montserrat', Arial, sans-serif;
+      --category-image-opacity: 0.5;
     }
+
     * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
     body {
-      margin: 0;
-      font-family: Montserrat, Arial, sans-serif;
-      background: linear-gradient(135deg, #111, #201813);
+      font-family: var(--font-body);
+      background: #171210;
       color: var(--chalk);
     }
+
     .app {
       display: grid;
-      grid-template-columns: 380px 1fr;
+      grid-template-columns: 540px 1fr;
       min-height: 100vh;
     }
+
     .controls {
       background: #120f0d;
       border-right: 1px solid rgba(255,255,255,.08);
-      padding: 20px;
+      padding: 18px;
       overflow: auto;
     }
-    h1, h2, h3 { margin: 0 0 12px; }
-    h1 { font-size: 28px; color: var(--accent); }
-    h2 { font-size: 18px; color: var(--muted); margin-top: 18px; }
-    p { line-height: 1.5; color: #dacdbf; }
+
+    .panel-shell {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-intro {
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .panel-intro h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      color: var(--accent);
+    }
+
+    .panel-intro p {
+      margin: 0;
+      color: #dacdbf;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    details.control-group {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 18px;
+      background: rgba(255,255,255,.025);
+      overflow: hidden;
+    }
+
+    details.control-group[open] {
+      background: rgba(255,255,255,.04);
+    }
+
+    details.control-group > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      font-weight: 800;
+      color: #fff4e8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
+    }
+
+    details.control-group > summary::-webkit-details-marker { display: none; }
+    details.control-group > summary::after {
+      content: '+';
+      font-size: 22px;
+      color: var(--accent);
+      line-height: 1;
+    }
+    details.control-group[open] > summary::after { content: '−'; }
+
+    .group-content { padding: 0 16px 16px; }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 14px;
+    }
+
+    .controls-grid .full { grid-column: 1 / -1; }
+    .controls-grid .triple { grid-column: span 1; }
+
     label {
       display: block;
-      font-size: 13px;
+      font-size: 12px;
       text-transform: uppercase;
       letter-spacing: .08em;
       color: #ccb6a2;
-      margin: 12px 0 6px;
+      margin: 10px 0 6px;
+      font-weight: 700;
     }
+
     input, textarea, select, button {
       width: 100%;
       font: inherit;
       border-radius: 12px;
       border: 1px solid rgba(255,255,255,.1);
     }
+
     input, textarea, select {
       padding: 12px 14px;
       background: #201813;
       color: #fff8ef;
     }
-    textarea { min-height: 220px; resize: vertical; }
+
+    input[type="color"] {
+      padding: 4px;
+      height: 48px;
+      cursor: pointer;
+    }
+
+    input[type="file"] {
+      padding: 10px;
+      background: #1a1411;
+    }
+
+    textarea { min-height: 190px; resize: vertical; }
+    .small-textarea { min-height: 165px; }
+
     button {
       padding: 13px 16px;
-      margin-top: 12px;
       background: linear-gradient(180deg, #f0b04c, #d28a25);
       color: #20130d;
       font-weight: 800;
       cursor: pointer;
     }
-    .secondary {
+
+    button.secondary {
       background: #2c231e;
       color: var(--chalk);
     }
-    .hint {
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .hint, .microcopy {
       font-size: 13px;
       color: #bca28a;
       margin-top: 8px;
+      line-height: 1.45;
     }
+
+    .subtle-note {
+      font-size: 12px;
+      color: #a88f7d;
+      margin-top: 6px;
+    }
+
+    .upload-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .upload-card {
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      border-radius: 14px;
+      padding: 10px 12px 12px;
+    }
+
+    .upload-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff1df;
+      margin-bottom: 4px;
+    }
+
+    .upload-sub {
+      font-size: 12px;
+      color: #baa18d;
+      margin-bottom: 8px;
+    }
+
+    .clear-btn {
+      margin-top: 8px;
+      padding: 9px 12px;
+      font-size: 13px;
+    }
+
     .preview-wrap {
       padding: 22px;
       overflow: auto;
       display: flex;
       justify-content: center;
       align-items: flex-start;
+      background: #1a1411;
     }
+
     .poster {
-      width: 1080px;
-      min-height: 1920px;
-      background:
-        radial-gradient(circle at top left, rgba(255,255,255,.06), transparent 30%),
-        radial-gradient(circle at bottom right, rgba(255,255,255,.03), transparent 26%),
-        linear-gradient(180deg, #2d221d 0%, #171210 100%);
-      border: 18px solid #5f3c21;
-      box-shadow: 0 24px 70px rgba(0,0,0,.5);
       position: relative;
-      padding: 48px;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      border: 18px solid var(--accent2);
+      box-shadow: 0 24px 70px rgba(0,0,0,.5);
+      background: var(--canvas-bg);
+      isolation: isolate;
     }
-    .poster:before {
-      content: "";
-      position: absolute; inset: 12px;
-      border: 2px solid rgba(240,176,76,.35);
+
+    .poster-bg-image,
+    .poster-bg-fill,
+    .poster-overlay,
+    .poster-frame,
+    .poster-vignette {
+      position: absolute;
+      inset: 0;
       pointer-events: none;
     }
-    .header {
-      text-align: center;
-      padding: 10px 30px 30px;
-      border-bottom: 2px dashed rgba(247,241,232,.15);
-      margin-bottom: 30px;
+
+    .poster-bg-image {
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+      z-index: 0;
     }
-    .brand {
-      font-family: Lobster, cursive;
-      font-size: 80px;
-      color: var(--accent);
-      line-height: 1.05;
-      margin-bottom: 10px;
+
+    .poster-bg-fill {
+      background: var(--canvas-bg);
+      z-index: 1;
     }
-    .subtitle {
-      font-size: 34px;
-      font-weight: 800;
-      letter-spacing: .08em;
-      text-transform: uppercase;
+
+    .poster.has-custom-bg .poster-bg-fill {
+      display: none;
     }
-    .tagline {
-      font-size: 24px;
-      color: var(--muted);
-      margin-top: 12px;
+
+    .poster-overlay {
+      background: radial-gradient(circle at top left, rgba(255,255,255,.08), transparent 28%),
+                  radial-gradient(circle at bottom right, rgba(255,255,255,.03), transparent 30%);
+      z-index: 2;
     }
-    .grid {
+
+    .poster-vignette {
+      box-shadow: inset 0 0 140px rgba(0,0,0,.18);
+      z-index: 2;
+    }
+
+    .poster-frame {
+      inset: 12px;
+      border: 2px solid rgba(240,176,76,.32);
+      z-index: 6;
+    }
+
+    .poster-inner {
+      position: relative;
+      z-index: 5;
+      padding: 34px;
+      height: 100%;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
+      grid-template-columns: minmax(0, 1.8fr) minmax(420px, 0.95fr);
+      gap: 22px;
     }
-    .section {
-      background: rgba(0,0,0,.15);
+
+    .left-col, .right-col {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .header,
+    .menu-card,
+    .section,
+    .box-card {
+      background: var(--panel);
+      backdrop-filter: blur(2px);
       border: 1px solid rgba(255,255,255,.08);
       border-radius: 22px;
-      padding: 20px 22px;
-      min-height: 230px;
+      position: relative;
+      overflow: hidden;
     }
+
+    .header {
+      padding: 24px 28px 22px;
+      min-height: 200px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 150px;
+    }
+
+    .logo {
+      max-width: 200px;
+      max-height: 150px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: none;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,.25));
+    }
+
+    .logo.visible { display: block; }
+
+    .brand {
+      font-family: var(--font-display);
+      font-size: 72px;
+      line-height: 1.02;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--chalk);
+    }
+
+    .tagline {
+      font-size: 20px;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    .menu-card {
+      padding: 22px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .menu-card-title,
+    .boxes-title {
+      font-family: var(--font-display);
+      font-size: 42px;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .sections-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .section {
+      padding: 16px 18px;
+      min-height: 170px;
+    }
+
     .section-title {
       display: inline-block;
-      padding: 8px 18px;
+      padding: 8px 16px;
       border-radius: 999px;
       background: linear-gradient(180deg, #6f4a2d, #4c311c);
       color: #fff4e8;
-      font-family: Lobster, cursive;
-      font-size: 38px;
-      margin-bottom: 18px;
+      font-family: var(--font-display);
+      font-size: 28px;
+      margin-bottom: 14px;
+      position: relative;
+      z-index: 2;
     }
-    .item {
-      margin-bottom: 13px;
-    }
-    .item-name {
-      font-size: 31px;
-      color: var(--accent);
-      font-weight: 800;
-      line-height: 1.15;
-    }
-    .item-sub {
-      font-size: 23px;
-      color: var(--chalk);
-      opacity: .95;
-      margin-top: 2px;
-    }
-    .footer {
+
+    .section-bg-image {
       position: absolute;
-      left: 48px; right: 48px; bottom: 42px;
-      border-top: 2px dashed rgba(247,241,232,.15);
-      padding-top: 18px;
+      inset: 14px;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: contain;
+      opacity: var(--category-image-opacity);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .section-content,
+    .box-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .item { margin-bottom: 11px; }
+
+    .item-top {
       display: flex;
       justify-content: space-between;
-      gap: 20px;
+      gap: 14px;
+      align-items: baseline;
+    }
+
+    .item-name {
+      font-size: 19px;
+      color: var(--chalk);
+      font-weight: 800;
+      line-height: 1.15;
+      flex: 1;
+    }
+
+    .item-price {
+      font-size: 18px;
+      color: var(--accent);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .item-sub {
+      font-size: 14px;
       color: var(--muted);
-      font-size: 22px;
+      margin-top: 2px;
+    }
+
+    .boxes-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+
+    .box-card {
+      padding: 18px;
+      min-height: 0;
+      flex: 1;
+    }
+
+    .box-image {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36%;
+      height: calc(100% - 24px);
+      background-position: right center;
+      background-repeat: no-repeat;
+      background-size: contain;
+      opacity: 1;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .box-content {
+      width: 64%;
+      padding-right: 10px;
+    }
+
+    .box-card.no-image .box-content {
+      width: 100%;
+      padding-right: 0;
+    }
+
+    .box-title {
+      font-family: var(--font-display);
+      font-size: 30px;
+      color: var(--accent);
+      margin-bottom: 10px;
+      line-height: 1.05;
+    }
+
+    .box-list {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .box-list li {
+      margin-bottom: 6px;
+      font-size: 18px;
+      color: var(--chalk);
       font-weight: 700;
     }
+
+    .promo {
+      margin-top: 14px;
+      display: inline-block;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+      color: #20130d;
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .footer {
+      border-top: 2px dashed rgba(247,241,232,.15);
+      padding-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
     .pill {
       border: 1px solid rgba(255,255,255,.1);
-      padding: 10px 16px;
+      padding: 8px 14px;
       border-radius: 999px;
       background: rgba(255,255,255,.03);
     }
+
+    @media (max-width: 2500px) {
+      .poster {
+        transform: scale(.72);
+        transform-origin: top center;
+        margin-bottom: -300px;
+      }
+    }
+
+    @media (max-width: 1600px) {
+      .poster {
+        transform: scale(.58);
+        margin-bottom: -430px;
+      }
+    }
+
     @media (max-width: 1400px) {
       .app { grid-template-columns: 1fr; }
       .controls { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.08); }
-      .poster { transform-origin: top center; }
+    }
+
+    @media print {
+      body { background: white; }
+      .controls, .panel-shell, .preview-wrap { margin: 0; padding: 0; }
+      .controls { display: none; }
+      .app { display: block; }
+      .preview-wrap { display: block; background: transparent; }
+      .poster {
+        transform: none !important;
+        margin: 0 !important;
+        box-shadow: none;
+        border-width: 8px;
+      }
+      @page { size: A3 landscape; margin: 0; }
     }
   </style>
 </head>
 <body>
   <div class="app">
     <aside class="controls">
-      <h1>Menu Poster Generator</h1>
-      <p>Zet platte tekst om naar een krijtbord-poster. Vul je titel, ondertitel en menu in. Elke sectie start met <strong>#</strong>. Elk item is <strong>Naam | omschrijving</strong>.</p>
+      <div class="panel-shell">
+        <div class="panel-intro">
+          <h1>Gezellig Hoekje Menu Generator</h1>
+          <p>Poster in liggend 1920×1080 canvas. Links staat de gewone kaart, rechts de 3 boxmenu’s. Je kan kleuren, lettertypes, logo, achtergrond en afbeeldingen per categorie en per boxmenu instellen.</p>
+        </div>
 
-      <label for="brand">Naam zaak</label>
-      <input id="brand" value="’t Gezellig Hoekje" />
+        <details class="control-group">
+          <summary>Basisinfo</summary>
+          <div class="group-content">
+            <div class="controls-grid">
+              <div class="full">
+                <label for="brand">Naam zaak</label>
+                <input id="brand" value="’t Gezellig Hoekje" />
+              </div>
+              <div class="full">
+                <label for="subtitle">Ondertitel</label>
+                <input id="subtitle" value="Koffiebar & Gebak" />
+              </div>
+              <div class="full">
+                <label for="tagline">Slogan</label>
+                <input id="tagline" value="Warm welkom op ’t gezelligste plekje van de stad!" />
+              </div>
+              <div>
+                <label for="footerLeft">Footer links</label>
+                <input id="footerLeft" value="Pillbox Hospital" />
+              </div>
+              <div>
+                <label for="footerRight">Footer rechts</label>
+                <input id="footerRight" value="Dagelijks vers & gezellig" />
+              </div>
+            </div>
+          </div>
+        </details>
 
-      <label for="subtitle">Ondertitel</label>
-      <input id="subtitle" value="Koffiebar & Gebak" />
+        <details class="control-group">
+          <summary>Vormgeving</summary>
+          <div class="group-content">
+            <div class="controls-grid">
+              <div>
+                <label for="fontChoice">Lettertype</label>
+                <select id="fontChoice">
+                  <option value="lobster">Lobster</option>
+                  <option value="playfair">Playfair Display</option>
+                  <option value="marker">Permanent Marker</option>
+                  <option value="nunito">Nunito</option>
+                  <option value="oswald">Oswald</option>
+                </select>
+              </div>
+              <div>
+                <label for="canvasBgColor">Achtergrondkleur canvas</label>
+                <input type="color" id="canvasBgColor" value="#1b1715" />
+              </div>
+              <div>
+                <label for="panelColor">Paneelkleur cards</label>
+                <input type="color" id="panelColor" value="#241d19" />
+              </div>
+              <div>
+                <label for="panelOpacity">Dekking paneelkleur</label>
+                <input type="range" id="panelOpacity" min="0" max="100" value="88" />
+              </div>
+              <div>
+                <label for="chalkColor">Tekstkleur</label>
+                <input type="color" id="chalkColor" value="#f7f1e8" />
+              </div>
+              <div>
+                <label for="accentColor">Accentkleur</label>
+                <input type="color" id="accentColor" value="#f0b04c" />
+              </div>
+              <div>
+                <label for="accent2Color">Accent 2</label>
+                <input type="color" id="accent2Color" value="#8c5c36" />
+              </div>
+              <div>
+                <label for="mutedColor">Subtekstkleur</label>
+                <input type="color" id="mutedColor" value="#d9c9b8" />
+              </div>
+              <div>
+                <label for="categoryImageOpacity">Transparantie categorie-afbeeldingen</label>
+                <input type="range" id="categoryImageOpacity" min="0" max="100" value="50" />
+              </div>
+            </div>
+          </div>
+        </details>
 
-      <label for="tagline">Slogan</label>
-      <input id="tagline" value="Warm welkom op ’t gezelligste plekje van de stad!" />
+        <details class="control-group">
+          <summary>Uploads</summary>
+          <div class="group-content">
+            <div class="controls-grid">
+              <div class="full">
+                <label for="bgUpload">Achtergrondafbeelding canvas</label>
+                <input type="file" id="bgUpload" accept="image/*" />
+                <div class="subtle-note">Gebruik best een afbeelding van 1920×1080. Die wordt vullend op het volledige canvas geplaatst.</div>
+                <button type="button" id="clearBgBtn" class="secondary clear-btn">Verwijder achtergrond</button>
+              </div>
+              <div class="full">
+                <label for="logoUpload">Logo</label>
+                <input type="file" id="logoUpload" accept="image/*" />
+                <button type="button" id="clearLogoBtn" class="secondary clear-btn">Verwijder logo</button>
+              </div>
+            </div>
 
-      <label for="footerLeft">Footer links</label>
-      <input id="footerLeft" value="Pillbox Hospital" />
+            <div class="upload-list" id="categoryUploads"></div>
+            <div class="upload-list" id="boxUploads"></div>
+          </div>
+        </details>
 
-      <label for="footerRight">Footer rechts</label>
-      <input id="footerRight" value="Dagelijks vers & gezellig" />
-
-      <label for="layout">Lay-out</label>
-      <select id="layout">
-        <option value="2">2 kolommen</option>
-        <option value="1">1 kolom</option>
-      </select>
-
-      <label for="menuText">Menu tekst</label>
-      <textarea id="menuText"># Koffie
-De Klassieke Knuffel | Cappuccino
-De Snelle Shot | Espresso
-De Zachte Wolk | Latte
+        <details class="control-group">
+          <summary>Menukaart</summary>
+          <div class="group-content">
+            <p class="hint">Gebruik per regel: <strong>Naam | omschrijving | prijs</strong>. Elke categorie start met <strong>#</strong>.</p>
+            <label for="menuText">Menu tekst</label>
+            <textarea id="menuText"># Koffie
+Cappuccino | Romige klassieker | €3,80
+Espresso | Klein en krachtig | €2,60
+Latte | Zacht en vol | €4,20
 
 # Thee
-De Warme Chai Droom | Chai
-De Frisse Opkikker | Muntthee
-De Britse Pauze | English Tea
+Chai | Kruidig en warm | €3,70
+Muntthee | Fris en zacht | €3,50
+English Tea | Traditioneel | €3,30
 
-# Chocolademelk
-De Zoete Omhelzing | Met slagroom
-De Power Choco | Chocochino
-De Caramel Comfort | Met caramel
-
-# Donuts
-De Choco Ring | Chocolade
-De Berry Bliss | Aardbei
-De Vanille Droom | Vanille
-
-# Cupcakes
-Red Velvet Verleiding | Red velvet
-Blueberry Bliss | Blueberry
-Choco Crush | Chocolade
+# Chocomelk
+Deluxe met slagroom | Extra gezellig | €4,50
+Chocochino | Met koffie | €4,80
+Met caramel | Zoete favoriet | €4,90
 
 # Tosti's
-De Italiaanse Smelt | Mozzarella
-De Pittige Kip | Kip tandoori
-De Mexicano Melt | Mexican pork</textarea>
+Mozzarella | Italiaanse smelt | €6,90
+Kip tandoori | Licht pittig | €7,40
+Mexican pork | Vol van smaak | €7,90</textarea>
+          </div>
+        </details>
 
-      <button id="generateBtn">Poster genereren</button>
-      <button id="downloadBtn" class="secondary">Download als PNG</button>
-      <div class="hint">Tip: voor een nieuw menu hoef je alleen de tekst in het menu-veld te vervangen.</div>
+        <details class="control-group">
+          <summary>Boxmenu's</summary>
+          <div class="group-content">
+            <p class="hint">Per boxmenu: titel met <strong>#</strong>, 5 items en een regel <strong>Prijs: €14,90</strong>.</p>
+            <label for="boxText">Boxmenu tekst</label>
+            <textarea id="boxText" class="small-textarea"># Lente Deal
+Cappuccino
+English Tea
+Tosti mozzarella
+Tosti kip tandoori
+Red velvet cupcake
+Prijs: €14,90
+
+# EMS Break Box
+Espresso
+Chocochino
+Tosti mexican pork
+Vanille donut
+Blueberry cupcake
+Prijs: €15,90
+
+# Gezellig Deluxe
+Latte
+Muntthee
+Tosti mozzarella
+Macaron
+Chocolade donut
+Prijs: €16,50</textarea>
+          </div>
+        </details>
+
+        <div class="button-row" style="grid-template-columns: 1fr 1fr;">
+          <button id="generateBtn">Poster genereren</button>
+          <button id="downloadBtn" class="secondary">Download als PNG</button>
+        </div>
+        <div class="microcopy">Wanneer je een achtergrondafbeelding toevoegt, vervangt die automatisch de canvas-achtergrondkleur. De paneelkleur blijft apart voor de cards en boxmenu’s.</div>
+      </div>
     </aside>
 
     <main class="preview-wrap">
-      <div id="poster" class="poster"></div>
+      <div id="poster" class="poster">
+        <div class="poster-bg-image" id="posterBgImage"></div>
+        <div class="poster-bg-fill"></div>
+        <div class="poster-overlay"></div>
+        <div class="poster-vignette"></div>
+        <div class="poster-frame"></div>
+        <div class="poster-inner" id="posterInner"></div>
+      </div>
     </main>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
-    function parseMenu(text) {
-      const lines = text.split(/\r?\n/);
-      const sections = [];
-      let current = null;
-      for (const raw of lines) {
-        const line = raw.trim();
-        if (!line) continue;
-        if (line.startsWith('#')) {
-          current = { title: line.replace(/^#+\s*/, ''), items: [] };
-          sections.push(current);
-          continue;
-        }
-        if (!current) continue;
-        const parts = line.split('|').map(s => s.trim());
-        current.items.push({ name: parts[0] || '', sub: parts[1] || '' });
-      }
-      return sections;
-    }
-
-    function buildPoster() {
-      const brand = document.getElementById('brand').value.trim();
-      const subtitle = document.getElementById('subtitle').value.trim();
-      const tagline = document.getElementById('tagline').value.trim();
-      const footerLeft = document.getElementById('footerLeft').value.trim();
-      const footerRight = document.getElementById('footerRight').value.trim();
-      const layout = document.getElementById('layout').value;
-      const sections = parseMenu(document.getElementById('menuText').value);
-      const poster = document.getElementById('poster');
-
-      poster.innerHTML = '';
-      const header = document.createElement('div');
-      header.className = 'header';
-      header.innerHTML = `
-        <div class="brand">${escapeHtml(brand)}</div>
-        <div class="subtitle">${escapeHtml(subtitle)}</div>
-        <div class="tagline">${escapeHtml(tagline)}</div>
-      `;
-      poster.appendChild(header);
-
-      const grid = document.createElement('div');
-      grid.className = 'grid';
-      grid.style.gridTemplateColumns = layout === '1' ? '1fr' : '1fr 1fr';
-
-      for (const section of sections) {
-        const block = document.createElement('section');
-        block.className = 'section';
-        const itemsHtml = section.items.map(item => `
-          <div class="item">
-            <div class="item-name">${escapeHtml(item.name)}</div>
-            ${item.sub ? `<div class="item-sub">${escapeHtml(item.sub)}</div>` : ''}
-          </div>`).join('');
-        block.innerHTML = `<div class="section-title">${escapeHtml(section.title)}</div>${itemsHtml}`;
-        grid.appendChild(block);
-      }
-      poster.appendChild(grid);
-
-      const footer = document.createElement('div');
-      footer.className = 'footer';
-      footer.innerHTML = `<div class="pill">${escapeHtml(footerLeft)}</div><div class="pill">${escapeHtml(footerRight)}</div>`;
-      poster.appendChild(footer);
-    }
+    const state = {
+      backgroundImage: '',
+      logoImage: '',
+      boxImages: {},
+      categoryImages: {}
+    };
 
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -324,21 +768,426 @@ De Mexicano Melt | Mexican pork</textarea>
       return div.innerHTML;
     }
 
-    async function downloadPoster() {
+    function slugify(text) {
+      return (text || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'item';
+    }
+
+    function hexToRgba(hex, alpha) {
+      const cleaned = hex.replace('#', '');
+      const expanded = cleaned.length === 3
+        ? cleaned.split('').map(c => c + c).join('')
+        : cleaned;
+      const bigint = parseInt(expanded, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function parseMenu(text) {
+      const lines = text.split(/\r?\n/);
+      const sections = [];
+      let current = null;
+
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) continue;
+        if (line.startsWith('#')) {
+          const title = line.replace(/^#+\s*/, '');
+          current = { id: slugify(title), title, items: [] };
+          sections.push(current);
+          continue;
+        }
+        if (!current) continue;
+        const parts = line.split('|').map(s => s.trim());
+        current.items.push({
+          name: parts[0] || '',
+          sub: parts[1] || '',
+          price: parts[2] || ''
+        });
+      }
+      return sections;
+    }
+
+    function parseBoxes(text) {
+      const lines = text.split(/\r?\n/);
+      const boxes = [];
+      let current = null;
+
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) continue;
+        if (line.startsWith('#')) {
+          const title = line.replace(/^#+\s*/, '');
+          current = { id: slugify(title), title, items: [], price: '' };
+          boxes.push(current);
+          continue;
+        }
+        if (!current) continue;
+        if (/^prijs\s*:/i.test(line)) {
+          current.price = line.replace(/^prijs\s*:/i, '').trim();
+        } else {
+          current.items.push(line);
+        }
+      }
+      return boxes.slice(0, 3);
+    }
+
+    function getFontMap(value) {
+      const fonts = {
+        lobster: { display: "'Lobster', cursive", body: "'Montserrat', Arial, sans-serif" },
+        playfair: { display: "'Playfair Display', serif", body: "'Montserrat', Arial, sans-serif" },
+        marker: { display: "'Permanent Marker', cursive", body: "'Nunito', Arial, sans-serif" },
+        nunito: { display: "'Nunito', sans-serif", body: "'Nunito', Arial, sans-serif" },
+        oswald: { display: "'Oswald', sans-serif", body: "'Montserrat', Arial, sans-serif" }
+      };
+      return fonts[value] || fonts.lobster;
+    }
+
+    function applyTheme() {
+      const root = document.documentElement;
+      const fontMap = getFontMap(document.getElementById('fontChoice').value);
+      const canvasBgColor = document.getElementById('canvasBgColor').value;
+      const panelColor = document.getElementById('panelColor').value;
+      const panelOpacity = Number(document.getElementById('panelOpacity').value) / 100;
+      const categoryImageOpacity = Number(document.getElementById('categoryImageOpacity').value) / 100;
+
+      root.style.setProperty('--canvas-bg', canvasBgColor);
+      root.style.setProperty('--panel', hexToRgba(panelColor, panelOpacity));
+      root.style.setProperty('--chalk', document.getElementById('chalkColor').value);
+      root.style.setProperty('--accent', document.getElementById('accentColor').value);
+      root.style.setProperty('--accent2', document.getElementById('accent2Color').value);
+      root.style.setProperty('--muted', document.getElementById('mutedColor').value);
+      root.style.setProperty('--font-display', fontMap.display);
+      root.style.setProperty('--font-body', fontMap.body);
+      root.style.setProperty('--category-image-opacity', String(categoryImageOpacity));
+
       const poster = document.getElementById('poster');
-      const canvas = await html2canvas(poster, {
-        backgroundColor: null,
-        scale: 2,
-        useCORS: true
+      const bgLayer = document.getElementById('posterBgImage');
+      if (state.backgroundImage) {
+        poster.classList.add('has-custom-bg');
+        bgLayer.style.backgroundImage = `url(${state.backgroundImage})`;
+      } else {
+        poster.classList.remove('has-custom-bg');
+        bgLayer.style.backgroundImage = 'none';
+      }
+    }
+
+    function renderUploadLists(sections, boxes) {
+      const categoryWrap = document.getElementById('categoryUploads');
+      const boxWrap = document.getElementById('boxUploads');
+
+      categoryWrap.innerHTML = sections.length ? '<div class="upload-title">Afbeeldingen per categoriekaart</div>' : '';
+      sections.forEach(section => {
+        const card = document.createElement('div');
+        card.className = 'upload-card';
+        card.innerHTML = `
+          <div class="upload-title">${escapeHtml(section.title)}</div>
+          <div class="upload-sub">Wordt centraal achter de tekst geplaatst met instelbare transparantie.</div>
+          <input type="file" accept="image/*" data-type="category" data-id="${escapeHtml(section.id)}" />
+          <button type="button" class="secondary clear-btn" data-clear-type="category" data-id="${escapeHtml(section.id)}">Verwijder afbeelding</button>
+        `;
+        categoryWrap.appendChild(card);
       });
-      const link = document.createElement('a');
-      link.download = 'menu-poster.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+
+      boxWrap.innerHTML = boxes.length ? '<div class="upload-title">Afbeeldingen per boxmenu</div>' : '';
+      boxes.forEach(box => {
+        const card = document.createElement('div');
+        card.className = 'upload-card';
+        card.innerHTML = `
+          <div class="upload-title">${escapeHtml(box.title)}</div>
+          <div class="upload-sub">Wordt rechts uitgelijnd en verticaal gecentreerd geplaatst, zonder transparantie.</div>
+          <input type="file" accept="image/*" data-type="box" data-id="${escapeHtml(box.id)}" />
+          <button type="button" class="secondary clear-btn" data-clear-type="box" data-id="${escapeHtml(box.id)}">Verwijder afbeelding</button>
+        `;
+        boxWrap.appendChild(card);
+      });
+
+      categoryWrap.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function() {
+          handleDynamicImageUpload(this.dataset.type, this.dataset.id, this.files && this.files[0]);
+        });
+      });
+      boxWrap.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function() {
+          handleDynamicImageUpload(this.dataset.type, this.dataset.id, this.files && this.files[0]);
+        });
+      });
+
+      document.querySelectorAll('[data-clear-type]').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const type = this.dataset.clearType;
+          const id = this.dataset.id;
+          if (type === 'category') {
+            delete state.categoryImages[id];
+          } else {
+            delete state.boxImages[id];
+          }
+          buildPoster();
+        });
+      });
+    }
+
+    function buildPoster() {
+      applyTheme();
+
+      const brand = document.getElementById('brand').value.trim();
+      const subtitle = document.getElementById('subtitle').value.trim();
+      const tagline = document.getElementById('tagline').value.trim();
+      const footerLeft = document.getElementById('footerLeft').value.trim();
+      const footerRight = document.getElementById('footerRight').value.trim();
+      const sections = parseMenu(document.getElementById('menuText').value);
+      const boxes = parseBoxes(document.getElementById('boxText').value);
+      const posterInner = document.getElementById('posterInner');
+
+      renderUploadLists(sections, boxes);
+
+      const logoHtml = state.logoImage
+        ? `<img class="logo visible" src="${state.logoImage}" alt="Logo" />`
+        : `<img class="logo" alt="Logo" />`;
+
+      const sectionsHtml = sections.map(section => {
+        const image = state.categoryImages[section.id];
+        const bgHtml = image
+          ? `<div class="section-bg-image" style="background-image:url('${image}')"></div>`
+          : '';
+
+        const itemsHtml = section.items.map(item => `
+          <div class="item">
+            <div class="item-top">
+              <div class="item-name">${escapeHtml(item.name)}</div>
+              ${item.price ? `<div class="item-price">${escapeHtml(item.price)}</div>` : ''}
+            </div>
+            ${item.sub ? `<div class="item-sub">${escapeHtml(item.sub)}</div>` : ''}
+          </div>
+        `).join('');
+
+        return `
+          <section class="section">
+            ${bgHtml}
+            <div class="section-content">
+              <div class="section-title">${escapeHtml(section.title)}</div>
+              ${itemsHtml}
+            </div>
+          </section>
+        `;
+      }).join('');
+
+      const boxesHtml = boxes.map(box => {
+        const image = state.boxImages[box.id];
+        const hasImage = Boolean(image);
+        return `
+          <section class="box-card ${hasImage ? '' : 'no-image'}">
+            ${hasImage ? `<div class="box-image" style="background-image:url('${image}')"></div>` : ''}
+            <div class="box-content">
+              <div class="box-title">${escapeHtml(box.title)}</div>
+              <ol class="box-list">
+                ${box.items.slice(0, 5).map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+              </ol>
+              ${box.price ? `<div class="promo">Promo ${escapeHtml(box.price)}</div>` : ''}
+            </div>
+          </section>
+        `;
+      }).join('');
+
+      posterInner.innerHTML = `
+        <div class="left-col">
+          <div class="header">
+            <div class="logo-wrap">${logoHtml}</div>
+            <div>
+              <div class="brand">${escapeHtml(brand)}</div>
+              <div class="subtitle">${escapeHtml(subtitle)}</div>
+              <div class="tagline">${escapeHtml(tagline)}</div>
+            </div>
+          </div>
+
+          <section class="menu-card">
+            <div class="menu-card-title">Menukaart</div>
+            <div class="sections-grid">${sectionsHtml}</div>
+          </section>
+
+          <div class="footer">
+            <div class="pill">${escapeHtml(footerLeft)}</div>
+            <div class="pill">${escapeHtml(footerRight)}</div>
+          </div>
+        </div>
+
+        <div class="right-col">
+          <section class="menu-card">
+            <div class="boxes-title">Boxmenu's</div>
+            <div class="boxes-stack">${boxesHtml}</div>
+          </section>
+        </div>
+      `;
+    }
+
+    function handleImageUpload(input, key, callback) {
+      const file = input.files && input.files[0];
+      if (!file) {
+        state[key] = '';
+        callback();
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        state[key] = reader.result;
+        callback();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleDynamicImageUpload(type, id, file) {
+      if (!file) {
+        if (type === 'category') delete state.categoryImages[id];
+        if (type === 'box') delete state.boxImages[id];
+        buildPoster();
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (type === 'category') state.categoryImages[id] = reader.result;
+        if (type === 'box') state.boxImages[id] = reader.result;
+        buildPoster();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function preloadImage(url) {
+      return new Promise(resolve => {
+        if (!url) {
+          resolve();
+          return;
+        }
+        const img = new Image();
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+        img.src = url;
+      });
+    }
+
+    function waitForImages(container) {
+      const images = Array.from(container.querySelectorAll('img'));
+      const pendingTags = images.filter(img => !img.complete).map(img => new Promise(resolve => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      }));
+
+      const backgroundUrls = [];
+      container.querySelectorAll('[style*="background-image"]').forEach(el => {
+        const value = el.style.backgroundImage || '';
+        const match = value.match(/url\((["']?)(.*?)\)/);
+        if (match && match[2]) backgroundUrls.push(match[2]);
+      });
+
+      const pendingBackgrounds = backgroundUrls.map(preloadImage);
+      return Promise.all([...pendingTags, ...pendingBackgrounds]);
+    }
+
+    async function downloadPoster() {
+      const button = document.getElementById('downloadBtn');
+      const originalLabel = button.textContent;
+      button.disabled = true;
+      button.textContent = 'PNG wordt gemaakt...';
+
+      let clone;
+      try {
+        buildPoster();
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+
+        const poster = document.getElementById('poster');
+        clone = poster.cloneNode(true);
+        clone.id = 'poster-export-clone';
+        clone.style.transform = 'none';
+        clone.style.margin = '0';
+        clone.style.position = 'fixed';
+        clone.style.left = '0';
+        clone.style.top = '0';
+        clone.style.width = '1920px';
+        clone.style.height = '1080px';
+        clone.style.maxWidth = 'none';
+        clone.style.maxHeight = 'none';
+        clone.style.zIndex = '-1';
+        clone.style.opacity = '1';
+        document.body.appendChild(clone);
+
+        await waitForImages(clone);
+        await new Promise(resolve => setTimeout(resolve, 120));
+
+        const canvas = await html2canvas(clone, {
+          backgroundColor: null,
+          scale: 1,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          width: 1920,
+          height: 1080,
+          windowWidth: 1920,
+          windowHeight: 1080,
+          imageTimeout: 0
+        });
+
+        const dataUrl = canvas.toDataURL('image/png');
+        if (!dataUrl || dataUrl === 'data:,') {
+          throw new Error('Lege PNG-data ontvangen.');
+        }
+
+        const link = document.createElement('a');
+        link.download = 'gezellig-hoekje-menu-1920x1080.png';
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } catch (error) {
+        console.error('PNG export fout:', error);
+        alert('De PNG-download is mislukt. Controleer of je browser lokale downloads toelaat en probeer opnieuw.');
+      } finally {
+        const exportClone = clone || document.getElementById('poster-export-clone');
+        if (exportClone) exportClone.remove();
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
     }
 
     document.getElementById('generateBtn').addEventListener('click', buildPoster);
     document.getElementById('downloadBtn').addEventListener('click', downloadPoster);
+
+    document.getElementById('bgUpload').addEventListener('change', function() {
+      handleImageUpload(this, 'backgroundImage', buildPoster);
+    });
+
+    document.getElementById('logoUpload').addEventListener('change', function() {
+      handleImageUpload(this, 'logoImage', buildPoster);
+    });
+
+    document.getElementById('clearBgBtn').addEventListener('click', function() {
+      state.backgroundImage = '';
+      document.getElementById('bgUpload').value = '';
+      buildPoster();
+    });
+
+    document.getElementById('clearLogoBtn').addEventListener('click', function() {
+      state.logoImage = '';
+      document.getElementById('logoUpload').value = '';
+      buildPoster();
+    });
+
+    [
+      'brand','subtitle','tagline','footerLeft','footerRight','fontChoice',
+      'canvasBgColor','panelColor','panelOpacity','chalkColor','accentColor','accent2Color','mutedColor',
+      'categoryImageOpacity','menuText','boxText'
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', buildPoster);
+      el.addEventListener('change', buildPoster);
+    });
+
     buildPoster();
   </script>
 </body>
