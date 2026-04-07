@@ -3,831 +3,344 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gezellig Hoekje Menu Generator</title>
+  <title>'t Gezellig Hoekje - Beheersysteem v2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Montserrat:wght@400;600;700;800&family=Playfair+Display:wght@400;700;800&family=Permanent+Marker&family=Nunito:wght@400;700;800&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --canvas-bg: #1b1715;
-      --panel: rgba(36, 29, 25, 0.88);
-      --chalk: #f7f1e8;
+      --bg: #171210;
+      --bg-soft: #1d1613;
+      --panel: rgba(36, 29, 25, 0.94);
+      --panel-2: rgba(255,255,255,.03);
+      --line: rgba(255,255,255,.08);
+      --text: #f7f1e8;
+      --muted: #d7c6b3;
       --accent: #f0b04c;
-      --accent2: #8c5c36;
-      --muted: #d9c9b8;
-      --font-display: 'Lobster', cursive;
-      --font-body: 'Montserrat', Arial, sans-serif;
-      --category-image-opacity: 0.5;
+      --accent-2: #8c5c36;
+      --ok: #78c97c;
+      --warn: #ffbe62;
+      --bad: #ff8585;
+      --shadow: 0 20px 50px rgba(0,0,0,.28);
+      --radius: 20px;
     }
-
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
-      font-family: var(--font-body);
-      background: #171210;
-      color: var(--chalk);
+      font-family: 'Montserrat', Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top, #2a1d15, #171210 30%);
     }
-
-    .site-header-bar {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      padding: 18px 24px;
-      background: rgba(18, 15, 13, 0.96);
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      backdrop-filter: blur(8px);
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(18, 15, 13, .94);
+      backdrop-filter: blur(10px);
     }
-
-    .site-header-title {
-      margin: 0;
-      font-size: 28px;
-      color: var(--accent);
-      font-weight: 800;
-      letter-spacing: .02em;
-    }
-
-    .top-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .top-nav a {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 42px;
-      padding: 10px 16px;
-      border-radius: 999px;
-      color: var(--chalk);
-      text-decoration: none;
-      font-weight: 800;
-      border: 1px solid rgba(255,255,255,.1);
-      background: rgba(255,255,255,.04);
-    }
-
-    .top-nav a.active {
-      background: linear-gradient(180deg, #f0b04c, #d28a25);
-      color: #20130d;
-      border-color: transparent;
-    }
-
-    .app {
-      display: grid;
-      grid-template-columns: 540px 1fr;
-      min-height: calc(100vh - 79px);
-    }
-
-    .controls {
-      background: #120f0d;
-      border-right: 1px solid rgba(255,255,255,.08);
-      padding: 18px;
-      overflow: auto;
-    }
-
-    .panel-shell {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .panel-intro {
-      padding: 16px 18px;
-      border-radius: 18px;
-      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      border: 1px solid rgba(255,255,255,.08);
-    }
-
-    .panel-intro h1 {
-      margin: 0 0 8px;
-      font-size: 28px;
-      color: var(--accent);
-    }
-
-    .panel-intro p {
-      margin: 0;
-      color: #dacdbf;
-      line-height: 1.55;
-      font-size: 14px;
-    }
-
-    details.control-group {
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 18px;
-      background: rgba(255,255,255,.025);
+    .brandline { display: flex; align-items: center; gap: 14px; }
+    .brandlogo {
+      width: 54px; height: 54px; border-radius: 14px; border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(240,176,76,.28), rgba(140,92,54,.18));
+      display: grid; place-items: center; font-family: 'Lobster', cursive; font-size: 24px; color: var(--accent);
       overflow: hidden;
     }
-
-    details.control-group[open] {
-      background: rgba(255,255,255,.04);
+    .brandlogo img { width: 100%; height: 100%; object-fit: cover; }
+    .titlewrap h1 {
+      margin: 0; font-family: 'Lobster', cursive; font-size: 32px; color: var(--accent); font-weight: 400;
     }
-
-    details.control-group > summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 14px 16px;
-      font-weight: 800;
-      color: #fff4e8;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      user-select: none;
+    .titlewrap p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+    .nav { display: flex; flex-wrap: wrap; gap: 10px; }
+    .nav button {
+      border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--text);
+      min-height: 42px; padding: 10px 16px; border-radius: 999px; font-weight: 800; cursor: pointer;
     }
-
-    details.control-group > summary::-webkit-details-marker { display: none; }
-    details.control-group > summary::after {
-      content: '+';
-      font-size: 22px;
-      color: var(--accent);
-      line-height: 1;
+    .nav button.active { background: linear-gradient(180deg, #f0b04c, #d28a25); color: #20130d; border-color: transparent; }
+    .layout { display: grid; grid-template-columns: 420px 1fr; min-height: calc(100vh - 87px); }
+    .sidebar {
+      border-right: 1px solid var(--line); background: rgba(0,0,0,.12); padding: 18px; overflow: auto;
     }
-    details.control-group[open] > summary::after { content: '−'; }
-
-    .group-content { padding: 0 16px 16px; }
-
-    .controls-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px 14px;
+    .workspace { padding: 18px; overflow: auto; }
+    .intro {
+      padding: 18px; background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 14px;
     }
-
-    .controls-grid .full { grid-column: 1 / -1; }
-    .controls-grid .triple { grid-column: span 1; }
-
-    label {
-      display: block;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: #ccb6a2;
-      margin: 10px 0 6px;
-      font-weight: 700;
+    .intro h2 { margin: 0 0 8px; font-size: 28px; color: var(--accent); }
+    .intro p { margin: 0; line-height: 1.55; color: var(--muted); }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
     }
-
-    input, textarea, select, button {
-      width: 100%;
-      font: inherit;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.1);
+    .panel + .panel { margin-top: 14px; }
+    .panel-head { padding: 16px 18px; border-bottom: 1px solid var(--line); display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    .panel-head h2, .panel-head h3 { margin: 0; font-size: 18px; }
+    .panel-body { padding: 16px 18px 18px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
+    .cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:14px; }
+    .stack { display:flex; flex-direction:column; gap:12px; }
+    .row { display:flex; gap:10px; align-items:center; }
+    .wrap { flex-wrap: wrap; }
+    .grow { flex:1; }
+    .metric { padding:18px; background:var(--panel); border:1px solid var(--line); border-radius:18px; }
+    .metric small { color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-size:11px; }
+    .metric strong { display:block; font-size:30px; margin-top:6px; }
+    .metric span { color:var(--muted); font-size:13px; }
+    label { display:block; margin:10px 0 6px; color:#ccb6a2; font-size:12px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+    input, select, textarea, button { width:100%; font:inherit; border-radius:12px; border:1px solid var(--line); }
+    input, select, textarea {
+      background:#201813; color:var(--text); padding:12px 14px;
     }
-
-    input, textarea, select {
-      padding: 12px 14px;
-      background: #201813;
-      color: #fff8ef;
+    input[type="number"] { appearance: textfield; }
+    input[type="file"] { padding: 9px; }
+    textarea { min-height: 96px; resize: vertical; }
+    .btn {
+      padding:12px 14px; background:linear-gradient(180deg, #f0b04c, #d28a25); color:#20130d; font-weight:800; cursor:pointer;
     }
-
-    input[type="color"] {
-      padding: 4px;
-      height: 48px;
-      cursor: pointer;
+    .btn.secondary { background:#2c231e; color:var(--text); }
+    .btn.ghost { background:rgba(255,255,255,.03); color:var(--text); }
+    .btn.danger { background:#5b2727; color:#fff; }
+    .item-card { padding:14px; border:1px solid var(--line); border-radius:16px; background:var(--panel-2); }
+    .item-card h4 { margin:0 0 6px; font-size:16px; }
+    .item-meta { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 0; }
+    .item-meta span {
+      font-size:12px; color:var(--muted); border:1px solid var(--line); padding:5px 9px; border-radius:999px;
     }
-
-    input[type="file"] {
-      padding: 10px;
-      background: #1a1411;
-    }
-
-    textarea { min-height: 190px; resize: vertical; }
-    .small-textarea { min-height: 165px; }
-
-    button {
-      padding: 13px 16px;
-      background: linear-gradient(180deg, #f0b04c, #d28a25);
-      color: #20130d;
-      font-weight: 800;
-      cursor: pointer;
-    }
-
-    button.secondary {
-      background: #2c231e;
-      color: var(--chalk);
-    }
-
-    .button-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-    }
-
-    .hint, .microcopy {
-      font-size: 13px;
-      color: #bca28a;
-      margin-top: 8px;
-      line-height: 1.45;
-    }
-
-    .subtle-note {
-      font-size: 12px;
-      color: #a88f7d;
-      margin-top: 6px;
-    }
-
-    .upload-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .upload-card {
-      border: 1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.03);
-      border-radius: 14px;
-      padding: 10px 12px 12px;
-    }
-
-    .upload-title {
-      font-size: 14px;
-      font-weight: 800;
-      color: #fff1df;
-      margin-bottom: 4px;
-    }
-
-    .upload-sub {
-      font-size: 12px;
-      color: #baa18d;
-      margin-bottom: 8px;
-    }
-
-    .clear-btn {
-      margin-top: 8px;
-      padding: 9px 12px;
-      font-size: 13px;
-    }
-
-    .preview-wrap {
-      padding: 22px;
-      overflow: auto;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      background: #1a1411;
-    }
-
-    .poster {
-      position: relative;
-      width: 1920px;
-      height: 1080px;
-      overflow: hidden;
-      border: 18px solid var(--accent2);
-      box-shadow: 0 24px 70px rgba(0,0,0,.5);
-      background: var(--canvas-bg);
-      isolation: isolate;
-    }
-
-    .poster-bg-image,
-    .poster-bg-fill,
-    .poster-overlay,
-    .poster-frame,
-    .poster-vignette {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    .poster-bg-image {
-      background-position: center;
-      background-repeat: no-repeat;
-      background-size: cover;
-      z-index: 0;
-    }
-
-    .poster-bg-fill {
-      background: var(--canvas-bg);
-      z-index: 1;
-    }
-
-    .poster.has-custom-bg .poster-bg-fill {
-      display: none;
-    }
-
-    .poster-overlay {
-      background: radial-gradient(circle at top left, rgba(255,255,255,.08), transparent 28%),
-                  radial-gradient(circle at bottom right, rgba(255,255,255,.03), transparent 30%);
-      z-index: 2;
-    }
-
-    .poster-vignette {
-      box-shadow: inset 0 0 140px rgba(0,0,0,.18);
-      z-index: 2;
-    }
-
-    .poster-frame {
-      inset: 12px;
-      border: 2px solid rgba(240,176,76,.32);
-      z-index: 6;
-    }
-
-    .poster-inner {
-      position: relative;
-      z-index: 5;
-      padding: 34px;
-      height: 100%;
-      display: grid;
-      grid-template-columns: minmax(0, 1.8fr) minmax(420px, 0.95fr);
-      gap: 22px;
-    }
-
-    .left-col, .right-col {
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-
-    .header,
-    .menu-card,
-    .section,
-    .box-card {
-      background: var(--panel);
-      backdrop-filter: blur(2px);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 22px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .header {
-      padding: 24px 28px 22px;
-      min-height: 200px;
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 20px;
-      align-items: center;
-    }
-
-    .logo-wrap {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 150px;
-    }
-
-    .logo {
-      max-width: 200px;
-      max-height: 150px;
-      width: auto;
-      height: auto;
-      object-fit: contain;
-      display: none;
-      filter: drop-shadow(0 8px 18px rgba(0,0,0,.25));
-    }
-
-    .logo.visible { display: block; }
-
-    .brand {
-      font-family: var(--font-display);
-      font-size: 72px;
-      line-height: 1.02;
-      color: var(--accent);
-      margin-bottom: 8px;
-    }
-
-    .subtitle {
-      font-size: 28px;
-      font-weight: 900;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--chalk);
-    }
-
-    .tagline {
-      font-size: 20px;
-      color: var(--muted);
-      margin-top: 10px;
-    }
-
-    .menu-card {
-      padding: 22px;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-
-    .menu-card-title,
-    .boxes-title {
-      font-family: var(--font-display);
-      font-size: 42px;
-      color: var(--accent);
-      margin-bottom: 16px;
-    }
-
-    .sections-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      align-content: start;
-    }
-
-    .section {
-      padding: 16px 18px;
-      min-height: 170px;
-    }
-
-    .section-title {
-      display: inline-block;
-      padding: 8px 16px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, #6f4a2d, #4c311c);
-      color: #fff4e8;
-      font-family: var(--font-display);
-      font-size: 28px;
-      margin-bottom: 14px;
-      position: relative;
-      z-index: 2;
-    }
-
-    .section-bg-image {
-      position: absolute;
-      inset: 14px;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-size: contain;
-      opacity: var(--category-image-opacity);
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    .section-content,
-    .box-content {
-      position: relative;
-      z-index: 2;
-    }
-
-    .item { margin-bottom: 11px; }
-
-    .item-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: baseline;
-    }
-
-    .item-name {
-      font-size: 19px;
-      color: var(--chalk);
-      font-weight: 800;
-      line-height: 1.15;
-      flex: 1;
-    }
-
-    .item-price {
-      font-size: 18px;
-      color: var(--accent);
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .item-sub {
-      font-size: 14px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    .boxes-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      flex: 1;
-    }
-
-    .box-card {
-      padding: 18px;
-      min-height: 0;
-      flex: 1;
-    }
-
-    .box-image {
-      position: absolute;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 36%;
-      height: calc(100% - 24px);
-      background-position: right center;
-      background-repeat: no-repeat;
-      background-size: contain;
-      opacity: 1;
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    .box-content {
-      width: 64%;
-      padding-right: 10px;
-    }
-
-    .box-card.no-image .box-content {
-      width: 100%;
-      padding-right: 0;
-    }
-
-    .box-title {
-      font-family: var(--font-display);
-      font-size: 30px;
-      color: var(--accent);
-      margin-bottom: 10px;
-      line-height: 1.05;
-    }
-
-    .box-list {
-      margin: 0;
-      padding-left: 20px;
-    }
-
-    .box-list li {
-      margin-bottom: 6px;
-      font-size: 18px;
-      color: var(--chalk);
-      font-weight: 700;
-    }
-
-    .promo {
-      margin-top: 14px;
-      display: inline-block;
-      padding: 9px 14px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, var(--accent), var(--accent2));
-      color: #20130d;
-      font-weight: 900;
-      font-size: 18px;
-    }
-
-    .footer {
-      border-top: 2px dashed rgba(247,241,232,.15);
-      padding-top: 14px;
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      color: var(--muted);
-      font-size: 16px;
-      font-weight: 700;
-    }
-
     .pill {
-      border: 1px solid rgba(255,255,255,.1);
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.03);
+      display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border-radius:999px; border:1px solid var(--line);
+      background:rgba(255,255,255,.04); color:var(--muted); font-size:12px; font-weight:800;
     }
-
-    @media (max-width: 2500px) {
-      .poster {
-        transform: scale(.72);
-        transform-origin: top center;
-        margin-bottom: -300px;
-      }
+    .small { font-size: 13px; }
+    .muted { color: var(--muted); }
+    .status-ok { color: var(--ok); }
+    .status-warn { color: var(--warn); }
+    .status-bad { color: var(--bad); }
+    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:16px; }
+    table { width:100%; border-collapse: collapse; min-width:760px; }
+    th, td { padding:12px 14px; border-bottom:1px solid var(--line); text-align:left; font-size:14px; vertical-align:top; }
+    th { color:var(--muted); background:rgba(255,255,255,.03); text-transform:uppercase; font-size:11px; letter-spacing:.08em; }
+    tr:last-child td { border-bottom:0; }
+    .hidden { display:none !important; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; }
+    .actions button { width:auto; }
+    .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+    .form-grid .full { grid-column:1 / -1; }
+    .form-grid .triple { grid-column: span 1; }
+    .recipe-line, .box-line { display:grid; grid-template-columns: 1.7fr .7fr auto; gap:10px; align-items:end; }
+    .box-line { grid-template-columns: 1fr auto; }
+    .hint { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .menu-board {
+      background:#1b1715; border:18px solid var(--accent-2); border-radius:26px; min-height:700px; padding:28px; box-shadow:var(--shadow);
     }
-
-    @media (max-width: 1600px) {
-      .poster {
-        transform: scale(.58);
-        margin-bottom: -430px;
-      }
+    .menu-head {
+      display:grid; grid-template-columns:170px 1fr; gap:22px; align-items:center;
+      background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:18px 22px; margin-bottom:18px;
     }
-
-    @media (max-width: 1400px) {
-      .site-header-bar {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .app { grid-template-columns: 1fr; }
-      .controls { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .menu-logo {
+      width:150px; height:120px; border-radius:18px; border:1px solid var(--line); background:rgba(255,255,255,.03);
+      display:grid; place-items:center; overflow:hidden; font-family:'Lobster', cursive; font-size:26px; color:var(--accent);
     }
-
-    @media print {
-      body { background: white; }
-      .controls, .panel-shell, .preview-wrap { margin: 0; padding: 0; }
-      .controls { display: none; }
-      .app { display: block; }
-      .preview-wrap { display: block; background: transparent; }
-      .poster {
-        transform: none !important;
-        margin: 0 !important;
-        box-shadow: none;
-        border-width: 8px;
-      }
-      @page { size: A3 landscape; margin: 0; }
+    .menu-logo img { width:100%; height:100%; object-fit:cover; }
+    .menu-brand { font-family:'Lobster', cursive; color:var(--accent); font-size:58px; line-height:1; margin-bottom:8px; }
+    .menu-sub { font-size:26px; font-weight:800; text-transform:uppercase; }
+    .menu-tag { margin-top:8px; color:var(--muted); }
+    .menu-grid { display:grid; grid-template-columns:1.45fr .95fr; gap:18px; }
+    .menu-card, .box-card { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:18px; }
+    .menu-card h3, .box-card h3 { margin:0 0 12px; color:var(--accent); font-family:'Lobster', cursive; font-size:34px; font-weight:400; }
+    .menu-sections { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .menu-section { padding:14px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.03); }
+    .menu-section h4 { margin:0 0 12px; display:inline-block; padding:8px 14px; border-radius:999px; background:linear-gradient(180deg, #6f4a2d, #4c311c); font-family:'Lobster', cursive; font-size:24px; font-weight:400; }
+    .menu-entry { display:flex; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .menu-entry:last-child { margin-bottom:0; }
+    .menu-entry b { display:block; }
+    .menu-entry small { color:var(--muted); }
+    .boxes { display:flex; flex-direction:column; gap:12px; }
+    .promo { display:inline-block; margin-top:10px; padding:8px 12px; border-radius:999px; background:linear-gradient(180deg, #f0b04c, #d28a25); color:#20130d; font-weight:900; }
+    .footer-note { margin-top:14px; color:var(--muted); font-size:13px; }
+    details { border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.02); overflow:hidden; }
+    details summary { cursor:pointer; padding:14px 16px; font-weight:800; color:#fff4e8; list-style:none; }
+    details summary::-webkit-details-marker { display:none; }
+    .codebox { width:100%; min-height:180px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .okline, .warnline, .badline { padding: 11px 12px; border-radius: 12px; font-size: 13px; }
+    .okline { background: rgba(120,201,124,.09); color: #c5f1c7; border:1px solid rgba(120,201,124,.18); }
+    .warnline { background: rgba(255,190,98,.10); color: #ffe0b0; border:1px solid rgba(255,190,98,.18); }
+    .badline { background: rgba(255,133,133,.10); color: #ffc7c7; border:1px solid rgba(255,133,133,.18); }
+    @media (max-width: 1350px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
+      .grid-2, .grid-3, .menu-grid, .menu-sections, .form-grid, .menu-head { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <header class="site-header-bar">
-    <h1 class="site-header-title">Het gezellig hoekje - menumaker</h1>
-    <nav class="top-nav" aria-label="Hoofdnavigatie">
-      <a href="#" class="active">Menu generator</a>
-      <a href="#">Recepten maker</a>
-      <a href="#">Winkellijstje</a>
-    </nav>
+  <header class="topbar">
+    <div class="brandline">
+      <div class="brandlogo" id="brandLogo">GH</div>
+      <div class="titlewrap">
+        <h1>'t Gezellig Hoekje</h1>
+        <p>Koffiebar & gebak · beheersysteem v2</p>
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
   </header>
 
-  <div class="app">
-    <aside class="controls">
-      <div class="panel-shell">
-        <div class="panel-intro">
-          <h1>Gezellig Hoekje Menu Generator</h1>
-          <p>Poster in liggend 1920×1080 canvas. Links staat de gewone kaart, rechts de 3 boxmenu’s. Je kan kleuren, lettertypes, logo, achtergrond en afbeeldingen per categorie en per boxmenu instellen.</p>
-        </div>
-
-        <details class="control-group">
-          <summary>Basisinfo</summary>
-          <div class="group-content">
-            <div class="controls-grid">
-              <div class="full">
-                <label for="brand">Naam zaak</label>
-                <input id="brand" value="’t Gezellig Hoekje" />
-              </div>
-              <div class="full">
-                <label for="subtitle">Ondertitel</label>
-                <input id="subtitle" value="Koffiebar & Gebak" />
-              </div>
-              <div class="full">
-                <label for="tagline">Slogan</label>
-                <input id="tagline" value="Warm welkom op ’t gezelligste plekje van de stad!" />
-              </div>
-              <div>
-                <label for="footerLeft">Footer links</label>
-                <input id="footerLeft" value="Pillbox Hospital" />
-              </div>
-              <div>
-                <label for="footerRight">Footer rechts</label>
-                <input id="footerRight" value="Dagelijks vers & gezellig" />
-              </div>
-            </div>
-          </div>
-        </details>
-
-        <details class="control-group">
-          <summary>Vormgeving</summary>
-          <div class="group-content">
-            <div class="controls-grid">
-              <div>
-                <label for="fontChoice">Lettertype</label>
-                <select id="fontChoice">
-                  <option value="lobster">Lobster</option>
-                  <option value="playfair">Playfair Display</option>
-                  <option value="marker">Permanent Marker</option>
-                  <option value="nunito">Nunito</option>
-                  <option value="oswald">Oswald</option>
-                </select>
-              </div>
-              <div>
-                <label for="canvasBgColor">Achtergrondkleur canvas</label>
-                <input type="color" id="canvasBgColor" value="#1b1715" />
-              </div>
-              <div>
-                <label for="panelColor">Paneelkleur cards</label>
-                <input type="color" id="panelColor" value="#241d19" />
-              </div>
-              <div>
-                <label for="panelOpacity">Dekking paneelkleur</label>
-                <input type="range" id="panelOpacity" min="0" max="100" value="88" />
-              </div>
-              <div>
-                <label for="chalkColor">Tekstkleur</label>
-                <input type="color" id="chalkColor" value="#f7f1e8" />
-              </div>
-              <div>
-                <label for="accentColor">Accentkleur</label>
-                <input type="color" id="accentColor" value="#f0b04c" />
-              </div>
-              <div>
-                <label for="accent2Color">Accent 2</label>
-                <input type="color" id="accent2Color" value="#8c5c36" />
-              </div>
-              <div>
-                <label for="mutedColor">Subtekstkleur</label>
-                <input type="color" id="mutedColor" value="#d9c9b8" />
-              </div>
-              <div>
-                <label for="categoryImageOpacity">Transparantie categorie-afbeeldingen</label>
-                <input type="range" id="categoryImageOpacity" min="0" max="100" value="50" />
-              </div>
-            </div>
-          </div>
-        </details>
-
-        <details class="control-group">
-          <summary>Uploads</summary>
-          <div class="group-content">
-            <div class="controls-grid">
-              <div class="full">
-                <label for="bgUpload">Achtergrondafbeelding canvas</label>
-                <input type="file" id="bgUpload" accept="image/*" />
-                <div class="subtle-note">Gebruik best een afbeelding van 1920×1080. Die wordt vullend op het volledige canvas geplaatst.</div>
-                <button type="button" id="clearBgBtn" class="secondary clear-btn">Verwijder achtergrond</button>
-              </div>
-              <div class="full">
-                <label for="logoUpload">Logo</label>
-                <input type="file" id="logoUpload" accept="image/*" />
-                <button type="button" id="clearLogoBtn" class="secondary clear-btn">Verwijder logo</button>
-              </div>
-            </div>
-
-            <div class="upload-list" id="categoryUploads"></div>
-            <div class="upload-list" id="boxUploads"></div>
-          </div>
-        </details>
-
-        <details class="control-group">
-          <summary>Menukaart</summary>
-          <div class="group-content">
-            <p class="hint">Gebruik per regel: <strong>Naam | omschrijving | prijs</strong>. Elke categorie start met <strong>#</strong>.</p>
-            <label for="menuText">Menu tekst</label>
-            <textarea id="menuText"># Koffie
-Cappuccino | Romige klassieker | €3,80
-Espresso | Klein en krachtig | €2,60
-Latte | Zacht en vol | €4,20
-
-# Thee
-Chai | Kruidig en warm | €3,70
-Muntthee | Fris en zacht | €3,50
-English Tea | Traditioneel | €3,30
-
-# Chocomelk
-Deluxe met slagroom | Extra gezellig | €4,50
-Chocochino | Met koffie | €4,80
-Met caramel | Zoete favoriet | €4,90
-
-# Tosti's
-Mozzarella | Italiaanse smelt | €6,90
-Kip tandoori | Licht pittig | €7,40
-Mexican pork | Vol van smaak | €7,90</textarea>
-          </div>
-        </details>
-
-        <details class="control-group">
-          <summary>Boxmenu's</summary>
-          <div class="group-content">
-            <p class="hint">Per boxmenu: titel met <strong>#</strong>, 5 items en een regel <strong>Prijs: €14,90</strong>.</p>
-            <label for="boxText">Boxmenu tekst</label>
-            <textarea id="boxText" class="small-textarea"># Lente Deal
-Cappuccino
-English Tea
-Tosti mozzarella
-Tosti kip tandoori
-Red velvet cupcake
-Prijs: €14,90
-
-# EMS Break Box
-Espresso
-Chocochino
-Tosti mexican pork
-Vanille donut
-Blueberry cupcake
-Prijs: €15,90
-
-# Gezellig Deluxe
-Latte
-Muntthee
-Tosti mozzarella
-Macaron
-Chocolade donut
-Prijs: €16,50</textarea>
-          </div>
-        </details>
-
-        <div class="button-row" style="grid-template-columns: 1fr 1fr;">
-          <button id="generateBtn">Poster genereren</button>
-          <button id="downloadBtn" class="secondary">Download als PNG</button>
-        </div>
-        <div class="microcopy">Wanneer je een achtergrondafbeelding toevoegt, vervangt die automatisch de canvas-achtergrondkleur. De paneelkleur blijft apart voor de cards en boxmenu’s.</div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="intro">
+        <h2 id="sidebarTitle">Dashboard</h2>
+        <p id="sidebarIntro">Overzicht van recepten, stock, boxen, import/export en menukaarten.</p>
       </div>
+      <div id="sidebarContent"></div>
     </aside>
 
-    <main class="preview-wrap">
-      <div id="poster" class="poster">
-        <div class="poster-bg-image" id="posterBgImage"></div>
-        <div class="poster-bg-fill"></div>
-        <div class="poster-overlay"></div>
-        <div class="poster-vignette"></div>
-        <div class="poster-frame"></div>
-        <div class="poster-inner" id="posterInner"></div>
-      </div>
+    <main class="workspace">
+      <section id="view-dashboard"></section>
+      <section id="view-ingredients" class="hidden"></section>
+      <section id="view-recipes" class="hidden"></section>
+      <section id="view-boxes" class="hidden"></section>
+      <section id="view-stock" class="hidden"></section>
+      <section id="view-menu" class="hidden"></section>
     </main>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
-    const state = {
-      backgroundImage: '',
-      logoImage: '',
-      boxImages: {},
-      categoryImages: {}
+    const storageKey = 'gezellig-hoekje-tool-v2';
+
+    const DEFAULT_DATA = {
+      shop: {
+        name: "'t Gezellig Hoekje",
+        subtitle: 'Koffiebar & Gebak',
+        tagline: 'Warm welkom op het gezelligste plekje van de stad!',
+        logo: ''
+      },
+      settings: {
+        menuCategories: ['Koffie','Thee','Chocolademelk','Donuts','Cupcakes','Kleine Snoepjes','Broodjes',"Tosti's"]
+      },
+      ingredients: [
+        { id:'water', name:'Water', type:'raw', category:'Dranken', supplier:'supermarkt', unit:'stuk', price:8, stock:24, minStock:10, active:true },
+        { id:'coffee_beans', name:'Koffiebonen', type:'raw', category:'Dranken', supplier:'supermarkt', unit:'stuk', price:20, stock:20, minStock:10, active:true },
+        { id:'milk', name:'Melk', type:'raw', category:'Zuivel', supplier:'supermarkt', unit:'stuk', price:20, stock:20, minStock:10, active:true },
+        { id:'tea_black', name:'English Tea', type:'condiment', category:'Thee', supplier:'groothandel', unit:'stuk', price:18, stock:12, minStock:8, active:true },
+        { id:'tea_mint', name:'Munt', type:'condiment', category:'Thee', supplier:'groothandel', unit:'stuk', price:20, stock:10, minStock:6, active:true },
+        { id:'tea_chai', name:'Chai Mix', type:'condiment', category:'Thee', supplier:'groothandel', unit:'stuk', price:22, stock:10, minStock:6, active:true },
+        { id:'cocoa_mix', name:'Chocolademix', type:'condiment', category:'Chocolademelk', supplier:'groothandel', unit:'stuk', price:25, stock:14, minStock:8, active:true },
+        { id:'caramel', name:'Caramel', type:'condiment', category:'Toppings', supplier:'groothandel', unit:'stuk', price:18, stock:8, minStock:4, active:true },
+        { id:'whipped_cream', name:'Slagroom', type:'condiment', category:'Toppings', supplier:'groothandel', unit:'stuk', price:20, stock:8, minStock:4, active:true },
+        { id:'bread_roll', name:'Broodje', type:'raw', category:'Brood & Hartig', supplier:'groothandel', unit:'stuk', price:15, stock:16, minStock:10, active:true },
+        { id:'toast_bread', name:'Toastbrood', type:'raw', category:'Brood & Hartig', supplier:'groothandel', unit:'stuk', price:18, stock:18, minStock:10, active:true },
+        { id:'ham', name:'Ham', type:'raw', category:'Brood & Hartig', supplier:'groothandel', unit:'stuk', price:24, stock:10, minStock:6, active:true },
+        { id:'cheese', name:'Kaas', type:'raw', category:'Zuivel', supplier:'supermarkt', unit:'stuk', price:20, stock:18, minStock:8, active:true },
+        { id:'mozzarella', name:'Mozzarella', type:'raw', category:'Zuivel', supplier:'groothandel', unit:'stuk', price:24, stock:10, minStock:6, active:true },
+        { id:'chicken', name:'Kip', type:'raw', category:'Vlees', supplier:'supermarkt', unit:'stuk', price:40, stock:12, minStock:6, active:true },
+        { id:'mexican_pork_mix', name:'Mexican Pork Mix', type:'condiment', category:'Brood & Hartig', supplier:'groothandel', unit:'stuk', price:36, stock:6, minStock:4, active:true },
+        { id:'tandoori_mix', name:'Tandoori Mix', type:'condiment', category:'Brood & Hartig', supplier:'groothandel', unit:'stuk', price:24, stock:6, minStock:4, active:true },
+        { id:'lettuce_cut', name:'Gesneden Sla', type:'processed', category:'Verwerkt', supplier:'intern', unit:'portie', price:6, stock:10, minStock:4, active:true },
+        { id:'tomato_cut', name:'Gesneden Tomaat', type:'processed', category:'Verwerkt', supplier:'intern', unit:'portie', price:6, stock:10, minStock:4, active:true },
+        { id:'cucumber_cut', name:'Gesneden Komkommer', type:'processed', category:'Verwerkt', supplier:'intern', unit:'portie', price:5, stock:10, minStock:4, active:true },
+        { id:'donut_choco', name:'Donut Chocolade', type:'purchased_finished', category:'Donuts', supplier:'groothandel', unit:'stuk', price:34, stock:8, minStock:6, active:true },
+        { id:'donut_strawberry', name:'Donut Aardbei', type:'purchased_finished', category:'Donuts', supplier:'groothandel', unit:'stuk', price:34, stock:8, minStock:6, active:true },
+        { id:'donut_vanilla', name:'Donut Vanille', type:'purchased_finished', category:'Donuts', supplier:'groothandel', unit:'stuk', price:34, stock:8, minStock:6, active:true },
+        { id:'cupcake_red_velvet', name:'Cupcake Red Velvet', type:'purchased_finished', category:'Cupcakes', supplier:'groothandel', unit:'stuk', price:38, stock:8, minStock:6, active:true },
+        { id:'cupcake_blueberry', name:'Cupcake Blueberry', type:'purchased_finished', category:'Cupcakes', supplier:'groothandel', unit:'stuk', price:38, stock:8, minStock:6, active:true },
+        { id:'cupcake_choco', name:'Cupcake Choco', type:'purchased_finished', category:'Cupcakes', supplier:'groothandel', unit:'stuk', price:38, stock:8, minStock:6, active:true },
+        { id:'macaron', name:'Macarons', type:'purchased_finished', category:'Kleine Snoepjes', supplier:'groothandel', unit:'stuk', price:26, stock:10, minStock:6, active:true },
+        { id:'cookie', name:'Koekjes', type:'purchased_finished', category:'Kleine Snoepjes', supplier:'groothandel', unit:'stuk', price:18, stock:12, minStock:8, active:true },
+        { id:'oliebol', name:'Oliebollen', type:'purchased_finished', category:'Kleine Snoepjes', supplier:'groothandel', unit:'stuk', price:20, stock:12, minStock:8, active:true }
+      ],
+      recipes: [
+        { id:'klassieke_knuffel', name:'De Klassieke Knuffel', sub:'Cappuccino', category:'Koffie', productType:'drink', station:'drankje maken', animation:'coffee', calories:600, sellPrice:95, active:true, note:'', ingredients:[{id:'coffee_beans',amount:1},{id:'water',amount:1},{id:'milk',amount:1}] },
+        { id:'snelle_shot', name:'De Snelle Shot', sub:'Espresso', category:'Koffie', productType:'drink', station:'drankje maken', animation:'coffee', calories:600, sellPrice:75, active:true, note:'', ingredients:[{id:'coffee_beans',amount:1},{id:'water',amount:1}] },
+        { id:'zachte_wolk', name:'De Zachte Wolk', sub:'Latte', category:'Koffie', productType:'drink', station:'drankje maken', animation:'coffee', calories:600, sellPrice:100, active:true, note:'', ingredients:[{id:'coffee_beans',amount:1},{id:'water',amount:1},{id:'milk',amount:2}] },
+        { id:'warme_chai_droom', name:'De Warme Chai Droom', sub:'Chai', category:'Thee', productType:'drink', station:'drankje maken', animation:'cup', calories:600, sellPrice:90, active:true, note:'', ingredients:[{id:'tea_chai',amount:1},{id:'water',amount:1},{id:'milk',amount:1}] },
+        { id:'frisse_opkikker', name:'De Frisse Opkikker', sub:'Muntthee', category:'Thee', productType:'drink', station:'drankje maken', animation:'cup', calories:600, sellPrice:85, active:true, note:'', ingredients:[{id:'tea_mint',amount:1},{id:'water',amount:1}] },
+        { id:'britse_pauze', name:'De Britse Pauze', sub:'English Tea', category:'Thee', productType:'drink', station:'drankje maken', animation:'cup', calories:600, sellPrice:82, active:true, note:'', ingredients:[{id:'tea_black',amount:1},{id:'water',amount:1}] },
+        { id:'zoete_omhelzing', name:'De Zoete Omhelzing', sub:'Deluxe met slagroom', category:'Chocolademelk', productType:'drink', station:'drankje maken', animation:'cup', calories:600, sellPrice:105, active:true, note:'', ingredients:[{id:'cocoa_mix',amount:1},{id:'milk',amount:2},{id:'whipped_cream',amount:1}] },
+        { id:'power_choco', name:'De Power Choco', sub:'Chocochino', category:'Chocolademelk', productType:'drink', station:'drankje maken', animation:'coffee', calories:600, sellPrice:110, active:true, note:'', ingredients:[{id:'cocoa_mix',amount:1},{id:'milk',amount:2},{id:'coffee_beans',amount:1}] },
+        { id:'caramel_comfort', name:'De Caramel Comfort', sub:'Chocomelk met caramel', category:'Chocolademelk', productType:'drink', station:'drankje maken', animation:'cup', calories:600, sellPrice:108, active:true, note:'', ingredients:[{id:'cocoa_mix',amount:1},{id:'milk',amount:2},{id:'caramel',amount:1}] },
+        { id:'choco_ring', name:'De Choco Ring', sub:'Chocolade', category:'Donuts', productType:'snack', station:'eten maken', animation:'donut', calories:400, sellPrice:78, active:true, note:'Extern aangekocht', ingredients:[{id:'donut_choco',amount:1}] },
+        { id:'berry_bliss', name:'De Berry Bliss', sub:'Aardbei', category:'Donuts', productType:'snack', station:'eten maken', animation:'donut', calories:400, sellPrice:78, active:true, note:'Extern aangekocht', ingredients:[{id:'donut_strawberry',amount:1}] },
+        { id:'vanille_droom', name:'De Vanille Droom', sub:'Vanille', category:'Donuts', productType:'snack', station:'eten maken', animation:'donut', calories:400, sellPrice:78, active:true, note:'Extern aangekocht', ingredients:[{id:'donut_vanilla',amount:1}] },
+        { id:'red_velvet_verleiding', name:'Red Velvet Verleiding', sub:'', category:'Cupcakes', productType:'snack', station:'eten maken', animation:'donut', calories:400, sellPrice:88, active:true, note:'Extern aangekocht', ingredients:[{id:'cupcake_red_velvet',amount:1}] },
+        { id:'blueberry_bliss', name:'Blueberry Bliss', sub:'', category:'Cupcakes', productType:'snack', station:'eten maken', animation:'donut', calories:400, sellPrice:88, active:true, note:'Extern aangekocht', ingredients:[{id:'cupcake_blueberry',amount:1}] },
+        { id:'choco_crush', name:'Choco Crush', sub:'', category:'Cupcakes', productType:'snack', station:'eten maken', animation:'donut', calories:400, sellPrice:88, active:true, note:'Extern aangekocht', ingredients:[{id:'cupcake_choco',amount:1}] },
+        { id:'franse_kusjes', name:'Franse Kusjes', sub:'Macarons', category:'Kleine Snoepjes', productType:'snack', station:'eten maken', animation:'bagel', calories:400, sellPrice:65, active:true, note:'Extern aangekocht', ingredients:[{id:'macaron',amount:1}] },
+        { id:'zoete_knabbels', name:'Zoete Knabbels', sub:'Koekjes', category:'Kleine Snoepjes', productType:'snack', station:'eten maken', animation:'bagel', calories:400, sellPrice:55, active:true, note:'Extern aangekocht', ingredients:[{id:'cookie',amount:1}] },
+        { id:'omas_oliebollen', name:'Oma\'s Oliebollen', sub:'', category:'Kleine Snoepjes', productType:'snack', station:'eten maken', animation:'bagel', calories:400, sellPrice:58, active:true, note:'Extern aangekocht', ingredients:[{id:'oliebol',amount:1}] },
+        { id:'gezonde_hoekje', name:'Het Gezonde Hoekje', sub:'Gezond', category:'Broodjes', productType:'main', station:'eten maken', animation:'sandwich', calories:1000, sellPrice:120, active:true, note:'', ingredients:[{id:'bread_roll',amount:1},{id:'lettuce_cut',amount:1},{id:'tomato_cut',amount:1},{id:'cucumber_cut',amount:1},{id:'cheese',amount:1}] },
+        { id:'de_klassieker', name:'De Klassieker', sub:'Ham', category:'Broodjes', productType:'main', station:'eten maken', animation:'sandwich', calories:1000, sellPrice:118, active:true, note:'', ingredients:[{id:'bread_roll',amount:1},{id:'ham',amount:1},{id:'cheese',amount:1}] },
+        { id:'simpele_smelt', name:'De Simpele Smelt', sub:'Kaas', category:'Broodjes', productType:'main', station:'eten maken', animation:'sandwich', calories:1000, sellPrice:112, active:true, note:'', ingredients:[{id:'bread_roll',amount:1},{id:'cheese',amount:2}] },
+        { id:'italiaanse_smelt', name:'De Italiaanse Smelt', sub:'Mozzarella', category:"Tosti's", productType:'main', station:'eten maken', animation:'sandwich', calories:1000, sellPrice:132, active:true, note:'', ingredients:[{id:'toast_bread',amount:2},{id:'mozzarella',amount:2}] },
+        { id:'pittige_kip', name:'De Pittige Kip', sub:'Kip Tandoori', category:"Tosti's", productType:'main', station:'eten maken', animation:'sandwich', calories:1000, sellPrice:145, active:true, note:'', ingredients:[{id:'toast_bread',amount:2},{id:'chicken',amount:1},{id:'tandoori_mix',amount:1},{id:'cheese',amount:1}] },
+        { id:'mexicano_melt', name:'De Mexicano Melt', sub:'Mexican Pork', category:"Tosti's", productType:'main', station:'eten maken', animation:'sandwich', calories:1000, sellPrice:148, active:true, note:'', ingredients:[{id:'toast_bread',amount:2},{id:'mexican_pork_mix',amount:1},{id:'cheese',amount:1}] }
+      ],
+      boxes: [
+        { id:'spoedshift_box', name:'De Spoedshift Box', theme:'EMS', promo:'Voor snelle energie tijdens drukke shifts', active:true, discountPct:8, manualPrice:false, price:0, items:['snelle_shot','power_choco','de_klassieker','pittige_kip','choco_crush'] },
+        { id:'recovery_box', name:'De Recovery Box', theme:'EMS', promo:'Rustmoment na een zware interventie', active:true, discountPct:8, manualPrice:false, price:0, items:['frisse_opkikker','zachte_wolk','simpele_smelt','italiaanse_smelt','blueberry_bliss'] },
+        { id:'night_patrol_box', name:'De Night Patrol Box', theme:'LSPD', promo:'Voor lange shifts en nachtpatrouilles', active:true, discountPct:8, manualPrice:false, price:0, items:['klassieke_knuffel','caramel_comfort','gezonde_hoekje','mexicano_melt','choco_ring'] },
+        { id:'lentekriebel_box', name:'De Lentekriebel Box', theme:'Lente', promo:'Fris, licht en perfect voor het seizoen', active:true, discountPct:8, manualPrice:false, price:0, items:['warme_chai_droom','zachte_wolk','gezonde_hoekje','italiaanse_smelt','red_velvet_verleiding'] },
+        { id:'paasverwen_box', name:'De Paasverwen Box', theme:'Pasen', promo:'Zoet en gezellig met een paastwist', active:true, discountPct:8, manualPrice:false, price:0, items:['zoete_omhelzing','britse_pauze','de_klassieker','simpele_smelt','blueberry_bliss'] }
+      ],
+      plan: [
+        { recipeId:'klassieke_knuffel', amount:10 },
+        { recipeId:'de_klassieker', amount:8 },
+        { recipeId:'pittige_kip', amount:6 }
+      ]
     };
 
+    const views = {
+      dashboard: { label: 'Dashboard', intro: 'Overzicht van je shop, statusmeldingen en import/export.' },
+      ingredients: { label: 'Ingrediënten', intro: 'Voeg grondstoffen, verwerkte producten en aangekochte items toe. Inclusief bewerken en verwijderen.' },
+      recipes: { label: 'Recepten', intro: 'Maak recepten met prijs, calorieën, animatie en ingrediënten. Inclusief bewerken en verwijderen.' },
+      boxes: { label: 'Boxen', intro: 'Beheer menu boxen. De prijs wordt automatisch berekend op basis van de gekozen recepten en korting.' },
+      stock: { label: 'Stock & Winkellijst', intro: 'Bereken stock, tekorten en de aankooplijst op basis van je planning.' },
+      menu: { label: 'Menukaarten', intro: 'Preview van je kaart en boxen in dezelfde stijl als je bestaande menumaker.' }
+    };
+
+    const app = {
+      state: loadState(),
+      view: 'dashboard',
+      editingIngredientId: null,
+      editingRecipeId: null,
+      editingBoxId: null
+    };
+
+    syncBoxPrices();
+
+    function clone(data) { return JSON.parse(JSON.stringify(data)); }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return clone(DEFAULT_DATA);
+        return { ...clone(DEFAULT_DATA), ...JSON.parse(raw) };
+      } catch (error) {
+        console.error(error);
+        return clone(DEFAULT_DATA);
+      }
+    }
+
+    function saveState() {
+      syncBoxPrices();
+      localStorage.setItem(storageKey, JSON.stringify(app.state));
+    }
+
+    function resetState() {
+      if (!confirm('Alles resetten naar de demodata?')) return;
+      app.state = clone(DEFAULT_DATA);
+      app.editingIngredientId = null;
+      app.editingRecipeId = null;
+      app.editingBoxId = null;
+      saveState();
+      render();
+    }
+
+    function getIngredient(id) { return app.state.ingredients.find(item => item.id === id); }
+    function getRecipe(id) { return app.state.recipes.find(item => item.id === id); }
+
+    function formatMoney(value) { return `€${Number(value || 0).toFixed(2)}`; }
+
     function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+      return String(text ?? '').replace(/[&<>"']/g, s => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[s]));
     }
 
     function slugify(text) {
@@ -835,422 +348,962 @@ Prijs: €16,50</textarea>
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '') || 'item';
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '') || 'item';
     }
 
-    function hexToRgba(hex, alpha) {
-      const cleaned = hex.replace('#', '');
-      const expanded = cleaned.length === 3
-        ? cleaned.split('').map(c => c + c).join('')
-        : cleaned;
-      const bigint = parseInt(expanded, 16);
-      const r = (bigint >> 16) & 255;
-      const g = (bigint >> 8) & 255;
-      const b = bigint & 255;
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    function calculateRecipeCost(recipe) {
+      return (recipe.ingredients || []).reduce((sum, line) => {
+        const ingredient = getIngredient(line.id);
+        return sum + ((ingredient?.price || 0) * Number(line.amount || 0));
+      }, 0);
     }
 
-    function parseMenu(text) {
-      const lines = text.split(/\r?\n/);
-      const sections = [];
-      let current = null;
+    function foodCostPct(recipe) {
+      const sellPrice = Number(recipe.sellPrice || 0);
+      if (!sellPrice) return 0;
+      return (calculateRecipeCost(recipe) / sellPrice) * 100;
+    }
 
-      for (const raw of lines) {
-        const line = raw.trim();
-        if (!line) continue;
-        if (line.startsWith('#')) {
-          const title = line.replace(/^#+\s*/, '');
-          current = { id: slugify(title), title, items: [] };
-          sections.push(current);
+    function getMissingForRecipe(recipe) {
+      const missing = [];
+      for (const line of (recipe.ingredients || [])) {
+        const ingredient = getIngredient(line.id);
+        if (!ingredient) {
+          missing.push(`Ontbrekend ingrediëntrecord: ${line.id}`);
           continue;
         }
-        if (!current) continue;
-        const parts = line.split('|').map(s => s.trim());
-        current.items.push({
-          name: parts[0] || '',
-          sub: parts[1] || '',
-          price: parts[2] || ''
+        if (!ingredient.active) missing.push(`${ingredient.name} staat inactief`);
+      }
+      return missing;
+    }
+
+    function recipeStatus(recipe) {
+      const missing = getMissingForRecipe(recipe);
+      if (missing.length) return { label: 'Niet haalbaar', cls:'status-bad', lines: missing };
+      const cost = calculateRecipeCost(recipe);
+      if (!cost) return { label: 'Controle nodig', cls:'status-warn', lines:['Geen kostprijs beschikbaar'] };
+      const pct = foodCostPct(recipe);
+      if (pct > 65) return { label: 'Dunne marge', cls:'status-warn', lines:[`Food cost ${pct.toFixed(1)}%`] };
+      return { label: 'Haalbaar', cls:'status-ok', lines:[`Food cost ${pct.toFixed(1)}%`] };
+    }
+
+    function groupedRecipes() {
+      return app.state.recipes.filter(r => r.active !== false).reduce((acc, recipe) => {
+        const key = recipe.category || 'Overig';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(recipe);
+        return acc;
+      }, {});
+    }
+
+    function computeBoxPrice(box) {
+      const total = (box.items || []).reduce((sum, id) => sum + Number(getRecipe(id)?.sellPrice || 0), 0);
+      const discountPct = Number(box.discountPct || 0);
+      const discounted = total * (1 - discountPct / 100);
+      return Math.max(0, Math.round(discounted));
+    }
+
+    function syncBoxPrices() {
+      app.state.boxes.forEach(box => {
+        if (!box.manualPrice) box.price = computeBoxPrice(box);
+      });
+    }
+
+    function computePlan() {
+      const plan = app.state.plan || [];
+      const needMap = new Map();
+      plan.forEach(entry => {
+        const recipe = getRecipe(entry.recipeId);
+        if (!recipe) return;
+        (recipe.ingredients || []).forEach(line => {
+          const prev = needMap.get(line.id) || 0;
+          needMap.set(line.id, prev + (Number(line.amount || 0) * Number(entry.amount || 0)));
         });
-      }
-      return sections;
+      });
+      return [...needMap.entries()].map(([id, need]) => {
+        const ingredient = getIngredient(id) || { name:id, supplier:'onbekend', stock:0, price:0 };
+        const stock = Number(ingredient.stock || 0);
+        const buy = Math.max(0, need - stock);
+        return {
+          id,
+          name: ingredient.name,
+          supplier: ingredient.supplier,
+          need,
+          stock,
+          buy,
+          subtotal: buy * Number(ingredient.price || 0)
+        };
+      }).sort((a,b) => a.name.localeCompare(b.name, 'nl'));
     }
 
-    function parseBoxes(text) {
-      const lines = text.split(/\r?\n/);
-      const boxes = [];
-      let current = null;
-
-      for (const raw of lines) {
-        const line = raw.trim();
-        if (!line) continue;
-        if (line.startsWith('#')) {
-          const title = line.replace(/^#+\s*/, '');
-          current = { id: slugify(title), title, items: [], price: '' };
-          boxes.push(current);
-          continue;
-        }
-        if (!current) continue;
-        if (/^prijs\s*:/i.test(line)) {
-          current.price = line.replace(/^prijs\s*:/i, '').trim();
-        } else {
-          current.items.push(line);
-        }
-      }
-      return boxes.slice(0, 3);
-    }
-
-    function getFontMap(value) {
-      const fonts = {
-        lobster: { display: "'Lobster', cursive", body: "'Montserrat', Arial, sans-serif" },
-        playfair: { display: "'Playfair Display', serif", body: "'Montserrat', Arial, sans-serif" },
-        marker: { display: "'Permanent Marker', cursive", body: "'Nunito', Arial, sans-serif" },
-        nunito: { display: "'Nunito', sans-serif", body: "'Nunito', Arial, sans-serif" },
-        oswald: { display: "'Oswald', sans-serif", body: "'Montserrat', Arial, sans-serif" }
+    function dashboardData() {
+      const recipes = app.state.recipes;
+      const ingredients = app.state.ingredients;
+      const rows = computePlan();
+      return {
+        recipeCount: recipes.length,
+        ingredientCount: ingredients.length,
+        boxCount: app.state.boxes.length,
+        lowStockCount: ingredients.filter(i => Number(i.stock || 0) < Number(i.minStock || 0)).length,
+        missingRecipeCount: recipes.filter(r => recipeStatus(r).label !== 'Haalbaar').length,
+        buyTotal: rows.reduce((sum,row)=>sum+row.subtotal, 0)
       };
-      return fonts[value] || fonts.lobster;
     }
 
-    function applyTheme() {
-      const root = document.documentElement;
-      const fontMap = getFontMap(document.getElementById('fontChoice').value);
-      const canvasBgColor = document.getElementById('canvasBgColor').value;
-      const panelColor = document.getElementById('panelColor').value;
-      const panelOpacity = Number(document.getElementById('panelOpacity').value) / 100;
-      const categoryImageOpacity = Number(document.getElementById('categoryImageOpacity').value) / 100;
+    function renderNav() {
+      const nav = document.getElementById('nav');
+      nav.innerHTML = Object.entries(views).map(([key, view]) => `
+        <button class="${app.view === key ? 'active' : ''}" data-view="${key}">${escapeHtml(view.label)}</button>
+      `).join('');
+      nav.querySelectorAll('[data-view]').forEach(btn => {
+        btn.onclick = () => {
+          app.view = btn.dataset.view;
+          render();
+        };
+      });
+    }
 
-      root.style.setProperty('--canvas-bg', canvasBgColor);
-      root.style.setProperty('--panel', hexToRgba(panelColor, panelOpacity));
-      root.style.setProperty('--chalk', document.getElementById('chalkColor').value);
-      root.style.setProperty('--accent', document.getElementById('accentColor').value);
-      root.style.setProperty('--accent2', document.getElementById('accent2Color').value);
-      root.style.setProperty('--muted', document.getElementById('mutedColor').value);
-      root.style.setProperty('--font-display', fontMap.display);
-      root.style.setProperty('--font-body', fontMap.body);
-      root.style.setProperty('--category-image-opacity', String(categoryImageOpacity));
+    function renderSidebar() {
+      const wrap = document.getElementById('sidebarContent');
+      const meta = views[app.view];
+      document.getElementById('sidebarTitle').textContent = meta.label;
+      document.getElementById('sidebarIntro').textContent = meta.intro;
 
-      const poster = document.getElementById('poster');
-      const bgLayer = document.getElementById('posterBgImage');
-      if (state.backgroundImage) {
-        poster.classList.add('has-custom-bg');
-        bgLayer.style.backgroundImage = `url(${state.backgroundImage})`;
-      } else {
-        poster.classList.remove('has-custom-bg');
-        bgLayer.style.backgroundImage = 'none';
+      if (app.view === 'dashboard') {
+        wrap.innerHTML = `
+          <div class="panel">
+            <div class="panel-head"><h3>Shopinstellingen</h3></div>
+            <div class="panel-body">
+              <label for="shopName">Naam</label>
+              <input id="shopName" value="${escapeHtml(app.state.shop.name)}">
+              <label for="shopSub">Ondertitel</label>
+              <input id="shopSub" value="${escapeHtml(app.state.shop.subtitle)}">
+              <label for="shopTag">Slogan</label>
+              <input id="shopTag" value="${escapeHtml(app.state.shop.tagline)}">
+              <label for="shopLogoInput">Logo uploaden</label>
+              <input id="shopLogoInput" type="file" accept="image/*">
+              <div class="row" style="margin-top:12px;">
+                <button class="btn" id="saveShopBtn">Opslaan</button>
+                <button class="btn secondary" id="clearLogoBtn">Logo wissen</button>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Import / export</h3></div>
+            <div class="panel-body stack">
+              <button class="btn" id="exportBtn">Exporteer JSON</button>
+              <label for="importFile">Importeer JSON-bestand</label>
+              <input id="importFile" type="file" accept="application/json">
+              <label for="importText">Of plak JSON handmatig</label>
+              <textarea id="importText" class="codebox" placeholder='{"ingredients":[],"recipes":[],"boxes":[]}'></textarea>
+              <div class="row">
+                <button class="btn secondary" id="importTextBtn">JSON importeren</button>
+                <button class="btn danger" id="resetBtn">Reset demo</button>
+              </div>
+              <div class="hint">De import vervangt de huidige data volledig. Gebruik export eerst als back-up.</div>
+            </div>
+          </div>
+        `;
+        document.getElementById('saveShopBtn').onclick = saveShop;
+        document.getElementById('clearLogoBtn').onclick = () => { app.state.shop.logo = ''; saveState(); render(); };
+        document.getElementById('exportBtn').onclick = exportJson;
+        document.getElementById('importFile').onchange = importJsonFile;
+        document.getElementById('importTextBtn').onclick = importJsonText;
+        document.getElementById('resetBtn').onclick = resetState;
+        return;
+      }
+
+      if (app.view === 'ingredients') {
+        const editing = app.editingIngredientId ? getIngredient(app.editingIngredientId) : null;
+        wrap.innerHTML = `
+          <div class="panel">
+            <div class="panel-head"><h3>${editing ? 'Ingrediënt bewerken' : 'Nieuw ingrediënt'}</h3></div>
+            <div class="panel-body">
+              <div class="form-grid">
+                <div class="full">
+                  <label for="ingName">Naam</label>
+                  <input id="ingName" value="${escapeHtml(editing?.name || '')}">
+                </div>
+                <div>
+                  <label for="ingId">Code</label>
+                  <input id="ingId" value="${escapeHtml(editing?.id || '')}" ${editing ? 'disabled' : ''}>
+                </div>
+                <div>
+                  <label for="ingType">Type</label>
+                  <select id="ingType">
+                    ${['raw','processed','purchased_finished','condiment'].map(v => `<option value="${v}" ${editing?.type===v?'selected':''}>${v}</option>`).join('')}
+                  </select>
+                </div>
+                <div>
+                  <label for="ingCategory">Categorie</label>
+                  <input id="ingCategory" value="${escapeHtml(editing?.category || '')}">
+                </div>
+                <div>
+                  <label for="ingSupplier">Leverancier</label>
+                  <select id="ingSupplier">
+                    ${['supermarkt','groothandel','intern'].map(v => `<option value="${v}" ${editing?.supplier===v?'selected':''}>${v}</option>`).join('')}
+                  </select>
+                </div>
+                <div>
+                  <label for="ingPrice">Prijs</label>
+                  <input id="ingPrice" type="number" min="0" step="0.01" value="${editing?.price ?? 0}">
+                </div>
+                <div>
+                  <label for="ingStock">Stock</label>
+                  <input id="ingStock" type="number" min="0" step="1" value="${editing?.stock ?? 0}">
+                </div>
+                <div>
+                  <label for="ingMin">Minimumstock</label>
+                  <input id="ingMin" type="number" min="0" step="1" value="${editing?.minStock ?? 0}">
+                </div>
+              </div>
+              <div class="row" style="margin-top:14px;">
+                <button class="btn" id="saveIngredientBtn">${editing ? 'Wijzigingen opslaan' : 'Ingrediënt toevoegen'}</button>
+                ${editing ? '<button class="btn secondary" id="cancelIngredientEditBtn">Annuleren</button>' : ''}
+              </div>
+            </div>
+          </div>
+        `;
+        document.getElementById('saveIngredientBtn').onclick = saveIngredient;
+        if (editing) document.getElementById('cancelIngredientEditBtn').onclick = () => { app.editingIngredientId = null; renderSidebar(); };
+        return;
+      }
+
+      if (app.view === 'recipes') {
+        const editing = app.editingRecipeId ? getRecipe(app.editingRecipeId) : null;
+        wrap.innerHTML = `
+          <div class="panel">
+            <div class="panel-head"><h3>${editing ? 'Recept bewerken' : 'Nieuw recept'}</h3></div>
+            <div class="panel-body stack">
+              <div class="form-grid">
+                <div class="full">
+                  <label for="recipeName">Naam</label>
+                  <input id="recipeName" value="${escapeHtml(editing?.name || '')}">
+                </div>
+                <div>
+                  <label for="recipeSub">Subtitel</label>
+                  <input id="recipeSub" value="${escapeHtml(editing?.sub || '')}">
+                </div>
+                <div>
+                  <label for="recipeCategory">Categorie</label>
+                  <input id="recipeCategory" value="${escapeHtml(editing?.category || '')}">
+                </div>
+                <div>
+                  <label for="recipeType">Type</label>
+                  <select id="recipeType">
+                    ${[['main','hoofdgerecht'],['snack','hapje'],['drink','drankje']].map(([v,l]) => `<option value="${v}" ${editing?.productType===v?'selected':''}>${l}</option>`).join('')}
+                  </select>
+                </div>
+                <div>
+                  <label for="recipeStation">Station</label>
+                  <select id="recipeStation">
+                    ${['drankje maken','eten maken'].map(v => `<option value="${v}" ${editing?.station===v?'selected':''}>${v}</option>`).join('')}
+                  </select>
+                </div>
+                <div>
+                  <label for="recipeAnimation">Animatie</label>
+                  <select id="recipeAnimation">
+                    ${['coffee','cup','sandwich','donut','bagel','dinner','burger'].map(v => `<option value="${v}" ${editing?.animation===v?'selected':''}>${v}</option>`).join('')}
+                  </select>
+                </div>
+                <div>
+                  <label for="recipeCalories">Calorieën</label>
+                  <input id="recipeCalories" type="number" min="0" step="100" value="${editing?.calories ?? 0}">
+                </div>
+                <div>
+                  <label for="recipePrice">Verkoopprijs</label>
+                  <input id="recipePrice" type="number" min="0" step="0.01" value="${editing?.sellPrice ?? 0}">
+                </div>
+              </div>
+              <div>
+                <label>Ingrediënten</label>
+                <div id="recipeLines" class="stack"></div>
+                <div class="row" style="margin-top:8px;"><button class="btn secondary" id="addRecipeLineBtn">Ingrediëntregel toevoegen</button></div>
+              </div>
+              <div class="row">
+                <button class="btn" id="saveRecipeBtn">${editing ? 'Recept opslaan' : 'Recept toevoegen'}</button>
+                ${editing ? '<button class="btn secondary" id="cancelRecipeEditBtn">Annuleren</button>' : ''}
+              </div>
+            </div>
+          </div>
+        `;
+        document.getElementById('addRecipeLineBtn').onclick = () => createRecipeLine();
+        const lines = editing?.ingredients?.length ? editing.ingredients : [{ id: app.state.ingredients[0]?.id || '', amount: 1 }];
+        lines.forEach(line => createRecipeLine(line));
+        document.getElementById('saveRecipeBtn').onclick = saveRecipe;
+        document.getElementById('recipeType').onchange = autoCalories;
+        if (editing) document.getElementById('cancelRecipeEditBtn').onclick = () => { app.editingRecipeId = null; renderSidebar(); };
+        return;
+      }
+
+      if (app.view === 'boxes') {
+        const editing = app.editingBoxId ? app.state.boxes.find(b => b.id === app.editingBoxId) : null;
+        wrap.innerHTML = `
+          <div class="panel">
+            <div class="panel-head"><h3>${editing ? 'Box bewerken' : 'Nieuwe box'}</h3></div>
+            <div class="panel-body stack">
+              <div class="form-grid">
+                <div class="full"><label for="boxName">Naam</label><input id="boxName" value="${escapeHtml(editing?.name || '')}"></div>
+                <div><label for="boxTheme">Thema</label><input id="boxTheme" value="${escapeHtml(editing?.theme || '')}"></div>
+                <div><label for="boxDiscount">Korting %</label><input id="boxDiscount" type="number" min="0" max="100" step="1" value="${editing?.discountPct ?? 8}"></div>
+                <div class="full"><label for="boxPromo">Promo tekst</label><input id="boxPromo" value="${escapeHtml(editing?.promo || '')}"></div>
+              </div>
+              <div>
+                <label>Items in box</label>
+                <div id="boxLines" class="stack"></div>
+                <div class="row" style="margin-top:8px;"><button class="btn secondary" id="addBoxLineBtn">Item toevoegen</button></div>
+              </div>
+              <details open>
+                <summary>Prijsinstelling</summary>
+                <div class="panel-body">
+                  <label class="row" style="gap:8px;"><input id="boxManualPrice" type="checkbox" style="width:auto;" ${editing?.manualPrice ? 'checked' : ''}> Handmatige boxprijs gebruiken</label>
+                  <label for="boxPrice">Handmatige boxprijs</label>
+                  <input id="boxPrice" type="number" min="0" step="0.01" value="${editing?.price ?? 0}">
+                  <div class="hint" id="boxPriceHint"></div>
+                </div>
+              </details>
+              <div class="row">
+                <button class="btn" id="saveBoxBtn">${editing ? 'Box opslaan' : 'Box toevoegen'}</button>
+                ${editing ? '<button class="btn secondary" id="cancelBoxEditBtn">Annuleren</button>' : ''}
+              </div>
+            </div>
+          </div>
+        `;
+        document.getElementById('addBoxLineBtn').onclick = () => createBoxLine();
+        const lines = editing?.items?.length ? editing.items : [app.state.recipes[0]?.id || ''];
+        lines.forEach(value => createBoxLine(value));
+        document.getElementById('saveBoxBtn').onclick = saveBox;
+        document.getElementById('boxDiscount').oninput = updateBoxPriceHint;
+        document.getElementById('boxManualPrice').onchange = updateBoxPriceHint;
+        document.getElementById('boxPrice').oninput = updateBoxPriceHint;
+        if (editing) document.getElementById('cancelBoxEditBtn').onclick = () => { app.editingBoxId = null; renderSidebar(); };
+        updateBoxPriceHint();
+        return;
+      }
+
+      if (app.view === 'stock') {
+        wrap.innerHTML = `
+          <div class="panel">
+            <div class="panel-head"><h3>Planning</h3></div>
+            <div class="panel-body stack">
+              <div>
+                <label for="stockRecipe">Recept</label>
+                <select id="stockRecipe">${app.state.recipes.filter(r => r.active !== false).map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}</select>
+              </div>
+              <div>
+                <label for="stockAmount">Aantal</label>
+                <input id="stockAmount" type="number" min="1" step="1" value="1">
+              </div>
+              <div class="row">
+                <button class="btn" id="addPlanBtn">Toevoegen aan planning</button>
+                <button class="btn secondary" id="clearPlanBtn">Planning leegmaken</button>
+              </div>
+              <div id="planList"></div>
+            </div>
+          </div>
+        `;
+        document.getElementById('addPlanBtn').onclick = addPlanItem;
+        document.getElementById('clearPlanBtn').onclick = clearPlan;
+        renderPlanList();
+        return;
+      }
+
+      if (app.view === 'menu') {
+        wrap.innerHTML = `
+          <div class="panel">
+            <div class="panel-head"><h3>Menufilter</h3></div>
+            <div class="panel-body stack">
+              <div class="hint">De preview toont actieve recepten per categorie en actieve boxen. Aanpassingen gebeuren in de modules Recepten en Boxen.</div>
+              <div class="okline">Boxprijzen worden nu automatisch berekend op basis van de gekozen recepten en korting.</div>
+            </div>
+          </div>
+        `;
       }
     }
 
-    function renderUploadLists(sections, boxes) {
-      const categoryWrap = document.getElementById('categoryUploads');
-      const boxWrap = document.getElementById('boxUploads');
-
-      categoryWrap.innerHTML = sections.length ? '<div class="upload-title">Afbeeldingen per categoriekaart</div>' : '';
-      sections.forEach(section => {
-        const card = document.createElement('div');
-        card.className = 'upload-card';
-        card.innerHTML = `
-          <div class="upload-title">${escapeHtml(section.title)}</div>
-          <div class="upload-sub">Wordt centraal achter de tekst geplaatst met instelbare transparantie.</div>
-          <input type="file" accept="image/*" data-type="category" data-id="${escapeHtml(section.id)}" />
-          <button type="button" class="secondary clear-btn" data-clear-type="category" data-id="${escapeHtml(section.id)}">Verwijder afbeelding</button>
-        `;
-        categoryWrap.appendChild(card);
-      });
-
-      boxWrap.innerHTML = boxes.length ? '<div class="upload-title">Afbeeldingen per boxmenu</div>' : '';
-      boxes.forEach(box => {
-        const card = document.createElement('div');
-        card.className = 'upload-card';
-        card.innerHTML = `
-          <div class="upload-title">${escapeHtml(box.title)}</div>
-          <div class="upload-sub">Wordt rechts uitgelijnd en verticaal gecentreerd geplaatst, zonder transparantie.</div>
-          <input type="file" accept="image/*" data-type="box" data-id="${escapeHtml(box.id)}" />
-          <button type="button" class="secondary clear-btn" data-clear-type="box" data-id="${escapeHtml(box.id)}">Verwijder afbeelding</button>
-        `;
-        boxWrap.appendChild(card);
-      });
-
-      categoryWrap.querySelectorAll('input[type="file"]').forEach(input => {
-        input.addEventListener('change', function() {
-          handleDynamicImageUpload(this.dataset.type, this.dataset.id, this.files && this.files[0]);
-        });
-      });
-      boxWrap.querySelectorAll('input[type="file"]').forEach(input => {
-        input.addEventListener('change', function() {
-          handleDynamicImageUpload(this.dataset.type, this.dataset.id, this.files && this.files[0]);
-        });
-      });
-
-      document.querySelectorAll('[data-clear-type]').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const type = this.dataset.clearType;
-          const id = this.dataset.id;
-          if (type === 'category') {
-            delete state.categoryImages[id];
-          } else {
-            delete state.boxImages[id];
-          }
-          buildPoster();
-        });
-      });
-    }
-
-    function buildPoster() {
-      applyTheme();
-
-      const brand = document.getElementById('brand').value.trim();
-      const subtitle = document.getElementById('subtitle').value.trim();
-      const tagline = document.getElementById('tagline').value.trim();
-      const footerLeft = document.getElementById('footerLeft').value.trim();
-      const footerRight = document.getElementById('footerRight').value.trim();
-      const sections = parseMenu(document.getElementById('menuText').value);
-      const boxes = parseBoxes(document.getElementById('boxText').value);
-      const posterInner = document.getElementById('posterInner');
-
-      renderUploadLists(sections, boxes);
-
-      const logoHtml = state.logoImage
-        ? `<img class="logo visible" src="${state.logoImage}" alt="Logo" />`
-        : `<img class="logo" alt="Logo" />`;
-
-      const sectionsHtml = sections.map(section => {
-        const image = state.categoryImages[section.id];
-        const bgHtml = image
-          ? `<div class="section-bg-image" style="background-image:url('${image}')"></div>`
-          : '';
-
-        const itemsHtml = section.items.map(item => `
-          <div class="item">
-            <div class="item-top">
-              <div class="item-name">${escapeHtml(item.name)}</div>
-              ${item.price ? `<div class="item-price">${escapeHtml(item.price)}</div>` : ''}
-            </div>
-            ${item.sub ? `<div class="item-sub">${escapeHtml(item.sub)}</div>` : ''}
-          </div>
-        `).join('');
-
-        return `
-          <section class="section">
-            ${bgHtml}
-            <div class="section-content">
-              <div class="section-title">${escapeHtml(section.title)}</div>
-              ${itemsHtml}
-            </div>
-          </section>
-        `;
-      }).join('');
-
-      const boxesHtml = boxes.map(box => {
-        const image = state.boxImages[box.id];
-        const hasImage = Boolean(image);
-        return `
-          <section class="box-card ${hasImage ? '' : 'no-image'}">
-            ${hasImage ? `<div class="box-image" style="background-image:url('${image}')"></div>` : ''}
-            <div class="box-content">
-              <div class="box-title">${escapeHtml(box.title)}</div>
-              <ol class="box-list">
-                ${box.items.slice(0, 5).map(item => `<li>${escapeHtml(item)}</li>`).join('')}
-              </ol>
-              ${box.price ? `<div class="promo">Promo ${escapeHtml(box.price)}</div>` : ''}
-            </div>
-          </section>
-        `;
-      }).join('');
-
-      posterInner.innerHTML = `
-        <div class="left-col">
-          <div class="header">
-            <div class="logo-wrap">${logoHtml}</div>
-            <div>
-              <div class="brand">${escapeHtml(brand)}</div>
-              <div class="subtitle">${escapeHtml(subtitle)}</div>
-              <div class="tagline">${escapeHtml(tagline)}</div>
-            </div>
-          </div>
-
-          <section class="menu-card">
-            <div class="menu-card-title">Menukaart</div>
-            <div class="sections-grid">${sectionsHtml}</div>
-          </section>
-
-          <div class="footer">
-            <div class="pill">${escapeHtml(footerLeft)}</div>
-            <div class="pill">${escapeHtml(footerRight)}</div>
-          </div>
+    function renderDashboard() {
+      const target = document.getElementById('view-dashboard');
+      const info = dashboardData();
+      const lowStock = app.state.ingredients.filter(i => Number(i.stock || 0) < Number(i.minStock || 0));
+      const notReady = app.state.recipes.filter(r => recipeStatus(r).label !== 'Haalbaar');
+      target.innerHTML = `
+        <div class="cards">
+          <div class="metric"><small>Recepten</small><strong>${info.recipeCount}</strong><span>Actieve kaartitems en specials</span></div>
+          <div class="metric"><small>Ingrediënten</small><strong>${info.ingredientCount}</strong><span>Grondstoffen, verwerkt en aangekocht</span></div>
+          <div class="metric"><small>Boxen</small><strong>${info.boxCount}</strong><span>Shift- en themaboxen</span></div>
+          <div class="metric"><small>Tekorten</small><strong>${info.lowStockCount}</strong><span>Ingrediënten onder minimumstock</span></div>
+          <div class="metric"><small>Controle nodig</small><strong>${info.missingRecipeCount}</strong><span>Recepten met issues</span></div>
+          <div class="metric"><small>Koopbudget</small><strong>${formatMoney(info.buyTotal)}</strong><span>Op basis van de huidige planning</span></div>
         </div>
-
-        <div class="right-col">
-          <section class="menu-card">
-            <div class="boxes-title">Boxmenu's</div>
-            <div class="boxes-stack">${boxesHtml}</div>
-          </section>
+        <div class="grid-2" style="margin-top:14px;">
+          <div class="panel">
+            <div class="panel-head"><h2>Waarschuwingen</h2></div>
+            <div class="panel-body stack">
+              ${lowStock.length ? lowStock.map(item => `<div class="warnline">${escapeHtml(item.name)} onder minimumstock (${item.stock}/${item.minStock})</div>`).join('') : '<div class="okline">Geen stockwaarschuwingen.</div>'}
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Receptstatus</h2></div>
+            <div class="panel-body stack">
+              ${notReady.length ? notReady.map(recipe => {
+                const stat = recipeStatus(recipe);
+                return `<div class="warnline"><strong>${escapeHtml(recipe.name)}</strong><br>${escapeHtml(stat.lines.join(' · '))}</div>`;
+              }).join('') : '<div class="okline">Alle huidige recepten zijn haalbaar.</div>'}
+            </div>
+          </div>
         </div>
       `;
     }
 
-    function handleImageUpload(input, key, callback) {
-      const file = input.files && input.files[0];
+    function renderIngredients() {
+      const target = document.getElementById('view-ingredients');
+      const rows = [...app.state.ingredients].sort((a,b) => a.name.localeCompare(b.name, 'nl'));
+      target.innerHTML = `
+        <div class="panel">
+          <div class="panel-head"><h2>Ingrediëntenoverzicht</h2><div class="pill">${rows.length} items</div></div>
+          <div class="panel-body table-wrap">
+            <table>
+              <thead>
+                <tr><th>Naam</th><th>Type</th><th>Categorie</th><th>Leverancier</th><th>Prijs</th><th>Stock</th><th>Min</th><th>Acties</th></tr>
+              </thead>
+              <tbody>
+                ${rows.map(item => `
+                  <tr>
+                    <td>${escapeHtml(item.name)}</td>
+                    <td>${escapeHtml(item.type)}</td>
+                    <td>${escapeHtml(item.category)}</td>
+                    <td>${escapeHtml(item.supplier)}</td>
+                    <td>${formatMoney(item.price)}</td>
+                    <td class="${Number(item.stock||0) < Number(item.minStock||0) ? 'status-bad' : ''}">${item.stock}</td>
+                    <td>${item.minStock}</td>
+                    <td>
+                      <div class="actions">
+                        <button class="btn secondary" data-edit-ingredient="${item.id}">Bewerk</button>
+                        <button class="btn danger" data-delete-ingredient="${item.id}">Verwijder</button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+      target.querySelectorAll('[data-edit-ingredient]').forEach(btn => btn.onclick = () => {
+        app.editingIngredientId = btn.dataset.editIngredient;
+        renderSidebar();
+      });
+      target.querySelectorAll('[data-delete-ingredient]').forEach(btn => btn.onclick = () => deleteIngredient(btn.dataset.deleteIngredient));
+    }
+
+    function renderRecipes() {
+      const target = document.getElementById('view-recipes');
+      const rows = [...app.state.recipes].sort((a,b) => a.category.localeCompare(b.category, 'nl') || a.name.localeCompare(b.name, 'nl'));
+      target.innerHTML = `
+        <div class="panel">
+          <div class="panel-head"><h2>Receptenoverzicht</h2><div class="pill">${rows.length} recepten</div></div>
+          <div class="panel-body stack">
+            ${rows.map(recipe => {
+              const stat = recipeStatus(recipe);
+              const cost = calculateRecipeCost(recipe);
+              return `
+                <div class="item-card">
+                  <div class="row wrap" style="justify-content:space-between; align-items:flex-start;">
+                    <div>
+                      <h4>${escapeHtml(recipe.name)}</h4>
+                      <div class="muted small">${escapeHtml(recipe.sub || '')}</div>
+                    </div>
+                    <div class="actions">
+                      <button class="btn secondary" data-edit-recipe="${recipe.id}">Bewerk</button>
+                      <button class="btn danger" data-delete-recipe="${recipe.id}">Verwijder</button>
+                    </div>
+                  </div>
+                  <div class="item-meta">
+                    <span>${escapeHtml(recipe.category)}</span>
+                    <span>${escapeHtml(recipe.productType)}</span>
+                    <span>${escapeHtml(recipe.station)}</span>
+                    <span>${escapeHtml(recipe.animation)}</span>
+                    <span>${recipe.calories} cal</span>
+                    <span>Kost ${formatMoney(cost)}</span>
+                    <span>Prijs ${formatMoney(recipe.sellPrice)}</span>
+                    <span class="${stat.cls}">${escapeHtml(stat.label)}</span>
+                  </div>
+                  <div class="footer-note">Ingrediënten: ${(recipe.ingredients || []).map(line => `${escapeHtml(getIngredient(line.id)?.name || line.id)} × ${line.amount}`).join(', ')}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+      target.querySelectorAll('[data-edit-recipe]').forEach(btn => btn.onclick = () => {
+        app.editingRecipeId = btn.dataset.editRecipe;
+        renderSidebar();
+      });
+      target.querySelectorAll('[data-delete-recipe]').forEach(btn => btn.onclick = () => deleteRecipe(btn.dataset.deleteRecipe));
+    }
+
+    function renderBoxes() {
+      const target = document.getElementById('view-boxes');
+      syncBoxPrices();
+      target.innerHTML = `
+        <div class="panel">
+          <div class="panel-head"><h2>Boxenoverzicht</h2><div class="pill">${app.state.boxes.length} boxen</div></div>
+          <div class="panel-body stack">
+            ${app.state.boxes.map(box => {
+              const sum = (box.items || []).reduce((s,id) => s + Number(getRecipe(id)?.sellPrice || 0), 0);
+              return `
+                <div class="item-card">
+                  <div class="row wrap" style="justify-content:space-between; align-items:flex-start;">
+                    <div>
+                      <h4>${escapeHtml(box.name)}</h4>
+                      <div class="muted small">${escapeHtml(box.theme)}</div>
+                    </div>
+                    <div class="actions">
+                      <button class="btn secondary" data-edit-box="${box.id}">Bewerk</button>
+                      <button class="btn danger" data-delete-box="${box.id}">Verwijder</button>
+                    </div>
+                  </div>
+                  <div class="item-meta">
+                    <span>Items ${(box.items || []).length}</span>
+                    <span>Som recepten ${formatMoney(sum)}</span>
+                    <span>Korting ${Number(box.discountPct||0)}%</span>
+                    <span>${box.manualPrice ? 'Handmatige prijs' : 'Automatische prijs'}</span>
+                    <span>Boxprijs ${formatMoney(box.price)}</span>
+                  </div>
+                  <div class="footer-note">${(box.items || []).map(id => escapeHtml(getRecipe(id)?.name || id)).join(' · ')}</div>
+                  <div class="footer-note">${escapeHtml(box.promo || '')}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+      target.querySelectorAll('[data-edit-box]').forEach(btn => btn.onclick = () => {
+        app.editingBoxId = btn.dataset.editBox;
+        renderSidebar();
+      });
+      target.querySelectorAll('[data-delete-box]').forEach(btn => btn.onclick = () => deleteBox(btn.dataset.deleteBox));
+    }
+
+    function renderStock() {
+      const target = document.getElementById('view-stock');
+      const rows = computePlan();
+      const total = rows.reduce((sum,row)=>sum+row.subtotal, 0);
+      target.innerHTML = `
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head"><h2>Winkellijst</h2></div>
+            <div class="panel-body table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Ingrediënt</th><th>Leverancier</th><th>Nodig</th><th>Stock</th><th>Te kopen</th><th>Subtotaal</th></tr>
+                </thead>
+                <tbody>
+                  ${rows.length ? rows.map(row => `
+                    <tr>
+                      <td>${escapeHtml(row.name)}</td>
+                      <td>${escapeHtml(row.supplier)}</td>
+                      <td>${row.need}</td>
+                      <td>${row.stock}</td>
+                      <td class="${row.buy > 0 ? 'status-bad' : 'status-ok'}">${row.buy}</td>
+                      <td>${formatMoney(row.subtotal)}</td>
+                    </tr>
+                  `).join('') : `<tr><td colspan="6" class="muted">Nog geen plan toegevoegd in de zijbalk.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Samenvatting</h2></div>
+            <div class="panel-body stack small">
+              <div class="item-card"><h4>Totale aankoopkost</h4><div class="status-warn">${formatMoney(total)}</div></div>
+              <div class="item-card"><h4>Supermarkt</h4><div class="muted">${formatMoney(rows.filter(r => r.supplier === 'supermarkt').reduce((s,r)=>s+r.subtotal,0))}</div></div>
+              <div class="item-card"><h4>Groothandel</h4><div class="muted">${formatMoney(rows.filter(r => r.supplier === 'groothandel').reduce((s,r)=>s+r.subtotal,0))}</div></div>
+              <div class="item-card"><h4>Intern verwerken</h4><div class="muted">${rows.filter(r => r.supplier === 'intern' && r.buy > 0).map(r => r.name).join(', ') || 'Geen extra verwerking nodig.'}</div></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMenu() {
+      const target = document.getElementById('view-menu');
+      syncBoxPrices();
+      const grouped = groupedRecipes();
+      const logoHtml = app.state.shop.logo ? `<img src="${app.state.shop.logo}" alt="Logo">` : 'GH';
+      target.innerHTML = `
+        <div class="menu-board">
+          <div class="menu-head">
+            <div class="menu-logo">${logoHtml}</div>
+            <div>
+              <div class="menu-brand">${escapeHtml(app.state.shop.name)}</div>
+              <div class="menu-sub">${escapeHtml(app.state.shop.subtitle)}</div>
+              <div class="menu-tag">${escapeHtml(app.state.shop.tagline)}</div>
+            </div>
+          </div>
+          <div class="menu-grid">
+            <div class="menu-card">
+              <h3>Menukaart</h3>
+              <div class="menu-sections">
+                ${app.state.settings.menuCategories.map(category => {
+                  const recipes = grouped[category] || [];
+                  return `
+                    <div class="menu-section">
+                      <h4>${escapeHtml(category)}</h4>
+                      ${recipes.map(recipe => `
+                        <div class="menu-entry">
+                          <div>
+                            <b>${escapeHtml(recipe.name)}</b>
+                            <small>${escapeHtml(recipe.sub || '')}</small>
+                          </div>
+                          <strong>${formatMoney(recipe.sellPrice)}</strong>
+                        </div>
+                      `).join('') || `<div class="muted small">Nog geen items.</div>`}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+            <div class="box-card">
+              <h3>Boxmenu's</h3>
+              <div class="boxes">
+                ${app.state.boxes.filter(b => b.active !== false).map(box => `
+                  <div class="item-card">
+                    <h4>${escapeHtml(box.name)}</h4>
+                    <div class="muted small">${escapeHtml(box.theme)}</div>
+                    <ul>
+                      ${(box.items || []).map(id => `<li>${escapeHtml(getRecipe(id)?.name || id)}</li>`).join('')}
+                    </ul>
+                    <div class="promo">Promo ${formatMoney(box.price)}</div>
+                    <div class="footer-note">${escapeHtml(box.promo || '')}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPlanList() {
+      const wrap = document.getElementById('planList');
+      if (!wrap) return;
+      wrap.innerHTML = !app.state.plan.length
+        ? `<div class="item-card muted small">Nog geen recepten toegevoegd aan de planning.</div>`
+        : app.state.plan.map((row, index) => {
+            const recipe = getRecipe(row.recipeId);
+            return `
+              <div class="item-card row" style="justify-content:space-between;">
+                <div><strong>${escapeHtml(recipe?.name || row.recipeId)}</strong><div class="muted small">${row.amount} stuks</div></div>
+                <button class="btn secondary" style="width:auto;" data-remove-plan="${index}">Verwijder</button>
+              </div>`;
+          }).join('');
+      wrap.querySelectorAll('[data-remove-plan]').forEach(btn => btn.onclick = () => {
+        app.state.plan.splice(Number(btn.dataset.removePlan), 1);
+        saveState();
+        render();
+      });
+    }
+
+    function createRecipeLine(prefill = null) {
+      const wrap = document.getElementById('recipeLines');
+      if (!wrap) return;
+      const row = document.createElement('div');
+      row.className = 'recipe-line';
+      row.innerHTML = `
+        <div>
+          <select class="recipeIngSelect">
+            ${app.state.ingredients.map(i => `<option value="${i.id}" ${(prefill?.id === i.id) ? 'selected' : ''}>${escapeHtml(i.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div><input class="recipeIngAmount" type="number" min="1" step="1" value="${prefill?.amount ?? 1}"></div>
+        <div><button class="btn secondary removeRecipeLine" style="width:auto;">X</button></div>
+      `;
+      row.querySelector('.removeRecipeLine').onclick = () => row.remove();
+      wrap.appendChild(row);
+    }
+
+    function createBoxLine(prefill = null) {
+      const wrap = document.getElementById('boxLines');
+      if (!wrap) return;
+      const row = document.createElement('div');
+      row.className = 'box-line';
+      row.innerHTML = `
+        <div>
+          <select class="boxRecipeSelect">
+            ${app.state.recipes.map(r => `<option value="${r.id}" ${(prefill === r.id) ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div><button class="btn secondary removeBoxLine" style="width:auto;">X</button></div>
+      `;
+      row.querySelector('.removeBoxLine').onclick = () => { row.remove(); updateBoxPriceHint(); };
+      row.querySelector('.boxRecipeSelect').onchange = updateBoxPriceHint;
+      wrap.appendChild(row);
+      updateBoxPriceHint();
+    }
+
+    function autoCalories() {
+      const type = document.getElementById('recipeType')?.value;
+      const field = document.getElementById('recipeCalories');
+      if (!field) return;
+      if (type === 'main') field.value = 1000;
+      if (type === 'snack') field.value = 400;
+      if (type === 'drink') field.value = 600;
+    }
+
+    function updateBoxPriceHint() {
+      const hint = document.getElementById('boxPriceHint');
+      if (!hint) return;
+      const ids = [...document.querySelectorAll('.boxRecipeSelect')].map(el => el.value).filter(Boolean);
+      const sum = ids.reduce((s,id) => s + Number(getRecipe(id)?.sellPrice || 0), 0);
+      const discount = Number(document.getElementById('boxDiscount')?.value || 0);
+      const auto = Math.max(0, Math.round(sum * (1 - discount / 100)));
+      const manual = document.getElementById('boxManualPrice')?.checked;
+      hint.textContent = manual
+        ? `Som recepten: ${formatMoney(sum)} · Automatisch voorstel: ${formatMoney(auto)} · Handmatige prijs actief.`
+        : `Som recepten: ${formatMoney(sum)} · Automatische boxprijs: ${formatMoney(auto)}.`;
+    }
+
+    function saveIngredient() {
+      const name = document.getElementById('ingName').value.trim();
+      const id = (app.editingIngredientId || document.getElementById('ingId').value.trim());
+      if (!name || !id) return alert('Geef minstens een naam en code op.');
+      if (!app.editingIngredientId && app.state.ingredients.some(i => i.id === id)) return alert('Deze code bestaat al.');
+      const payload = {
+        id,
+        name,
+        type: document.getElementById('ingType').value,
+        category: document.getElementById('ingCategory').value.trim() || 'Algemeen',
+        supplier: document.getElementById('ingSupplier').value,
+        unit: 'stuk',
+        price: Number(document.getElementById('ingPrice').value || 0),
+        stock: Number(document.getElementById('ingStock').value || 0),
+        minStock: Number(document.getElementById('ingMin').value || 0),
+        active: true
+      };
+      if (app.editingIngredientId) {
+        const index = app.state.ingredients.findIndex(i => i.id === app.editingIngredientId);
+        app.state.ingredients[index] = payload;
+        app.editingIngredientId = null;
+      } else {
+        app.state.ingredients.push(payload);
+      }
+      saveState();
+      render();
+    }
+
+    function deleteIngredient(id) {
+      const used = app.state.recipes.filter(recipe => (recipe.ingredients || []).some(line => line.id === id));
+      if (used.length) {
+        alert(`Dit ingrediënt wordt nog gebruikt in ${used.length} recept(en). Verwijderen is nu geblokkeerd.`);
+        return;
+      }
+      if (!confirm('Ingrediënt verwijderen?')) return;
+      app.state.ingredients = app.state.ingredients.filter(item => item.id !== id);
+      if (app.editingIngredientId === id) app.editingIngredientId = null;
+      saveState();
+      render();
+    }
+
+    function saveRecipe() {
+      const name = document.getElementById('recipeName').value.trim();
+      if (!name) return alert('Geef een receptnaam op.');
+      const id = app.editingRecipeId || slugify(name);
+      if (!app.editingRecipeId && app.state.recipes.some(r => r.id === id)) return alert('Dit recept bestaat al.');
+      const lines = [...document.querySelectorAll('#recipeLines .recipe-line')].map(row => ({
+        id: row.querySelector('.recipeIngSelect').value,
+        amount: Number(row.querySelector('.recipeIngAmount').value || 1)
+      })).filter(line => line.id && line.amount > 0);
+      const payload = {
+        id,
+        name,
+        sub: document.getElementById('recipeSub').value.trim(),
+        category: document.getElementById('recipeCategory').value.trim() || 'Nieuw',
+        productType: document.getElementById('recipeType').value,
+        station: document.getElementById('recipeStation').value,
+        animation: document.getElementById('recipeAnimation').value,
+        calories: Number(document.getElementById('recipeCalories').value || 0),
+        sellPrice: Number(document.getElementById('recipePrice').value || 0),
+        ingredients: lines,
+        active: true,
+        note: ''
+      };
+      if (app.editingRecipeId) {
+        const index = app.state.recipes.findIndex(r => r.id === app.editingRecipeId);
+        app.state.recipes[index] = payload;
+        app.editingRecipeId = null;
+      } else {
+        app.state.recipes.push(payload);
+      }
+      saveState();
+      render();
+    }
+
+    function deleteRecipe(id) {
+      const used = app.state.boxes.filter(box => (box.items || []).includes(id));
+      if (used.length) {
+        alert(`Dit recept zit nog in ${used.length} box(en). Verwijderen is nu geblokkeerd.`);
+        return;
+      }
+      if (!confirm('Recept verwijderen?')) return;
+      app.state.recipes = app.state.recipes.filter(item => item.id !== id);
+      app.state.plan = app.state.plan.filter(item => item.recipeId !== id);
+      if (app.editingRecipeId === id) app.editingRecipeId = null;
+      saveState();
+      render();
+    }
+
+    function saveBox() {
+      const name = document.getElementById('boxName').value.trim();
+      if (!name) return alert('Geef een boxnaam op.');
+      const id = app.editingBoxId || slugify(name);
+      if (!app.editingBoxId && app.state.boxes.some(b => b.id === id)) return alert('Deze box bestaat al.');
+      const items = [...document.querySelectorAll('.boxRecipeSelect')].map(el => el.value).filter(Boolean);
+      const manualPrice = document.getElementById('boxManualPrice').checked;
+      const discountPct = Number(document.getElementById('boxDiscount').value || 0);
+      const payload = {
+        id,
+        name,
+        theme: document.getElementById('boxTheme').value.trim() || 'Algemeen',
+        promo: document.getElementById('boxPromo').value.trim(),
+        active: true,
+        discountPct,
+        manualPrice,
+        price: manualPrice ? Number(document.getElementById('boxPrice').value || 0) : 0,
+        items
+      };
+      if (!manualPrice) payload.price = computeBoxPrice(payload);
+      if (app.editingBoxId) {
+        const index = app.state.boxes.findIndex(b => b.id === app.editingBoxId);
+        app.state.boxes[index] = payload;
+        app.editingBoxId = null;
+      } else {
+        app.state.boxes.push(payload);
+      }
+      saveState();
+      render();
+    }
+
+    function deleteBox(id) {
+      if (!confirm('Box verwijderen?')) return;
+      app.state.boxes = app.state.boxes.filter(item => item.id !== id);
+      if (app.editingBoxId === id) app.editingBoxId = null;
+      saveState();
+      render();
+    }
+
+    function addPlanItem() {
+      const recipeId = document.getElementById('stockRecipe').value;
+      const amount = Number(document.getElementById('stockAmount').value || 1);
+      if (!recipeId || amount <= 0) return;
+      app.state.plan.push({ recipeId, amount });
+      saveState();
+      render();
+    }
+
+    function clearPlan() {
+      if (!confirm('Planning leegmaken?')) return;
+      app.state.plan = [];
+      saveState();
+      render();
+    }
+
+    function saveShop() {
+      app.state.shop.name = document.getElementById('shopName').value.trim() || app.state.shop.name;
+      app.state.shop.subtitle = document.getElementById('shopSub').value.trim() || app.state.shop.subtitle;
+      app.state.shop.tagline = document.getElementById('shopTag').value.trim() || app.state.shop.tagline;
+      const file = document.getElementById('shopLogoInput').files?.[0];
       if (!file) {
-        state[key] = '';
-        callback();
+        saveState();
+        render();
         return;
       }
       const reader = new FileReader();
       reader.onload = () => {
-        state[key] = reader.result;
-        callback();
+        app.state.shop.logo = reader.result;
+        saveState();
+        render();
       };
       reader.readAsDataURL(file);
     }
 
-    function handleDynamicImageUpload(type, id, file) {
-      if (!file) {
-        if (type === 'category') delete state.categoryImages[id];
-        if (type === 'box') delete state.boxImages[id];
-        buildPoster();
-        return;
-      }
+    function exportJson() {
+      const payload = JSON.stringify(app.state, null, 2);
+      const blob = new Blob([payload], { type:'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'gezellig-hoekje-data-v2.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function applyImportedState(data) {
+      if (!data || typeof data !== 'object') throw new Error('Ongeldige JSON-structuur.');
+      app.state = {
+        ...clone(DEFAULT_DATA),
+        ...data,
+        shop: { ...clone(DEFAULT_DATA).shop, ...(data.shop || {}) },
+        settings: { ...clone(DEFAULT_DATA).settings, ...(data.settings || {}) },
+        ingredients: Array.isArray(data.ingredients) ? data.ingredients : clone(DEFAULT_DATA).ingredients,
+        recipes: Array.isArray(data.recipes) ? data.recipes : clone(DEFAULT_DATA).recipes,
+        boxes: Array.isArray(data.boxes) ? data.boxes : clone(DEFAULT_DATA).boxes,
+        plan: Array.isArray(data.plan) ? data.plan : []
+      };
+      app.editingIngredientId = null;
+      app.editingRecipeId = null;
+      app.editingBoxId = null;
+      saveState();
+      render();
+    }
+
+    function importJsonFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        if (type === 'category') state.categoryImages[id] = reader.result;
-        if (type === 'box') state.boxImages[id] = reader.result;
-        buildPoster();
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function preloadImage(url) {
-      return new Promise(resolve => {
-        if (!url) {
-          resolve();
-          return;
+        try {
+          applyImportedState(JSON.parse(reader.result));
+        } catch (error) {
+          alert(`Import mislukt: ${error.message}`);
         }
-        const img = new Image();
-        img.onload = () => resolve();
-        img.onerror = () => resolve();
-        img.src = url;
-      });
+      };
+      reader.readAsText(file, 'utf-8');
     }
 
-    function waitForImages(container) {
-      const images = Array.from(container.querySelectorAll('img'));
-      const pendingTags = images.filter(img => !img.complete).map(img => new Promise(resolve => {
-        img.addEventListener('load', resolve, { once: true });
-        img.addEventListener('error', resolve, { once: true });
-      }));
-
-      const backgroundUrls = [];
-      container.querySelectorAll('[style*="background-image"]').forEach(el => {
-        const value = el.style.backgroundImage || '';
-        const match = value.match(/url\((["']?)(.*?)\)/);
-        if (match && match[2]) backgroundUrls.push(match[2]);
-      });
-
-      const pendingBackgrounds = backgroundUrls.map(preloadImage);
-      return Promise.all([...pendingTags, ...pendingBackgrounds]);
-    }
-
-    async function downloadPoster() {
-      const button = document.getElementById('downloadBtn');
-      const originalLabel = button.textContent;
-      button.disabled = true;
-      button.textContent = 'PNG wordt gemaakt...';
-
-      let clone;
+    function importJsonText() {
+      const text = document.getElementById('importText').value.trim();
+      if (!text) return alert('Plak eerst JSON in het tekstvak.');
       try {
-        buildPoster();
-        if (document.fonts && document.fonts.ready) {
-          await document.fonts.ready;
-        }
-
-        const poster = document.getElementById('poster');
-        clone = poster.cloneNode(true);
-        clone.id = 'poster-export-clone';
-        clone.style.transform = 'none';
-        clone.style.margin = '0';
-        clone.style.position = 'fixed';
-        clone.style.left = '0';
-        clone.style.top = '0';
-        clone.style.width = '1920px';
-        clone.style.height = '1080px';
-        clone.style.maxWidth = 'none';
-        clone.style.maxHeight = 'none';
-        clone.style.zIndex = '-1';
-        clone.style.opacity = '1';
-        document.body.appendChild(clone);
-
-        await waitForImages(clone);
-        await new Promise(resolve => setTimeout(resolve, 120));
-
-        const canvas = await html2canvas(clone, {
-          backgroundColor: null,
-          scale: 1,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          width: 1920,
-          height: 1080,
-          windowWidth: 1920,
-          windowHeight: 1080,
-          imageTimeout: 0
-        });
-
-        const dataUrl = canvas.toDataURL('image/png');
-        if (!dataUrl || dataUrl === 'data:,') {
-          throw new Error('Lege PNG-data ontvangen.');
-        }
-
-        const link = document.createElement('a');
-        link.download = 'gezellig-hoekje-menu-1920x1080.png';
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        applyImportedState(JSON.parse(text));
       } catch (error) {
-        console.error('PNG export fout:', error);
-        alert('De PNG-download is mislukt. Controleer of je browser lokale downloads toelaat en probeer opnieuw.');
-      } finally {
-        const exportClone = clone || document.getElementById('poster-export-clone');
-        if (exportClone) exportClone.remove();
-        button.disabled = false;
-        button.textContent = originalLabel;
+        alert(`Import mislukt: ${error.message}`);
       }
     }
 
-    document.getElementById('generateBtn').addEventListener('click', buildPoster);
-    document.getElementById('downloadBtn').addEventListener('click', downloadPoster);
+    function updateBrandLogo() {
+      const wrap = document.getElementById('brandLogo');
+      wrap.innerHTML = app.state.shop.logo ? `<img src="${app.state.shop.logo}" alt="Logo">` : 'GH';
+    }
 
-    document.getElementById('bgUpload').addEventListener('change', function() {
-      handleImageUpload(this, 'backgroundImage', buildPoster);
-    });
+    function render() {
+      updateBrandLogo();
+      renderNav();
+      renderSidebar();
+      document.querySelectorAll('.workspace > section').forEach(section => section.classList.add('hidden'));
+      document.getElementById(`view-${app.view}`).classList.remove('hidden');
+      if (app.view === 'dashboard') renderDashboard();
+      if (app.view === 'ingredients') renderIngredients();
+      if (app.view === 'recipes') renderRecipes();
+      if (app.view === 'boxes') renderBoxes();
+      if (app.view === 'stock') renderStock();
+      if (app.view === 'menu') renderMenu();
+    }
 
-    document.getElementById('logoUpload').addEventListener('change', function() {
-      handleImageUpload(this, 'logoImage', buildPoster);
-    });
-
-    document.getElementById('clearBgBtn').addEventListener('click', function() {
-      state.backgroundImage = '';
-      document.getElementById('bgUpload').value = '';
-      buildPoster();
-    });
-
-    document.getElementById('clearLogoBtn').addEventListener('click', function() {
-      state.logoImage = '';
-      document.getElementById('logoUpload').value = '';
-      buildPoster();
-    });
-
-    [
-      'brand','subtitle','tagline','footerLeft','footerRight','fontChoice',
-      'canvasBgColor','panelColor','panelOpacity','chalkColor','accentColor','accent2Color','mutedColor',
-      'categoryImageOpacity','menuText','boxText'
-    ].forEach(id => {
-      const el = document.getElementById(id);
-      el.addEventListener('input', buildPoster);
-      el.addEventListener('change', buildPoster);
-    });
-
-    buildPoster();
+    render();
   </script>
 </body>
 </html>
