@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="../assets/scripts/common.css" />
 </head>
 <body data-page="settings">
-  <header class="topbar">
+  <header class="topbar compact-topbar">
     <div class="brandline">
       <div class="brandlogo" id="brandLogo">GH</div>
       <div class="titlewrap">
@@ -18,19 +18,32 @@
         <p id="brandSub">Koffiebar & gebak · live koppeling</p>
       </div>
     </div>
-    <nav class="nav" id="nav"></nav>
-    <div class="api-badge">Opslag: <strong id="storageBadge">Niet geladen</strong></div>
+
+    <nav class="nav nav-single-row" id="nav"></nav>
+
+    <div class="header-status-group">
+      <div class="api-badge">Opslag: <strong id="storageBadge">Niet geladen</strong></div>
+      <div class="live-badge live-warn" id="liveStatusBadge">
+        <span id="liveStatusText">Live status onbekend</span>
+      </div>
+    </div>
   </header>
+
+  <section class="page-title-bar">
+    <h2 id="pageTitle">Shopinstellingen</h2>
+  </section>
+
   <div class="layout">
     <aside class="sidebar">
       <div class="intro">
-        <h2 id="sidebarTitle">Laden...</h2>
-        <p id="sidebarIntro">Even geduld.</p>
+        <h2 id="sidebarTitle">Shopinstellingen</h2>
+        <p id="sidebarIntro">Beheer shopinstellingen en test de API-verbinding.</p>
       </div>
       <div id="sidebarContent"></div>
     </aside>
     <main class="workspace" id="workspace"></main>
   </div>
+
   <script src="../assets/scripts/app.js"></script>
 </body>
 </html>

@@ -39,15 +39,7 @@ const PRODUCT_TYPE_OPTIONS = [
   { value: 'main', label: 'Hoofdgerecht' }
 ];
 
-const ANIMATION_OPTIONS = [
-  'coffee',
-  'cup',
-  'sandwich',
-  'donut',
-  'bagel',
-  'dinner',
-  'burger'
-];
+const ANIMATION_OPTIONS = ['coffee', 'cup', 'sandwich', 'donut', 'bagel', 'dinner', 'burger'];
 
 function esc(text) {
   return String(text ?? '').replace(/[&<>"']/g, s => ({
@@ -211,7 +203,13 @@ function settingsMap() {
 }
 
 function shopData() {
-  return APP.data.shop || {};
+  const s = settingsMap();
+  return {
+    name: s.brand_name || "'t Gezellig Hoekje",
+    subtitle: s.subtitle || 'Koffiebar & Gebak',
+    tagline: s.tagline || '',
+    logo: s.menu_logo_image || ''
+  };
 }
 
 function allCategories() {
@@ -1150,16 +1148,372 @@ async function removePlanIndex(idx) {
   renderStock();
 }
 
+function applyMenuStyles() {
+  const s = settingsMap();
+  document.documentElement.style.setProperty('--menu-canvas-bg', s.canvas_bg_color || '#1b1715');
+
+  const panelColor = s.panel_color || '#241d19';
+  const opacity = Math.max(0, Math.min(100, Number(s.panel_opacity || 94))) / 100;
+  document.documentElement.style.setProperty('--menu-panel', hexToRgba(panelColor, opacity));
+  document.documentElement.style.setProperty('--menu-chalk', s.chalk_color || '#f7f1e8');
+  document.documentElement.style.setProperty('--menu-accent', s.accent_color || '#f0b04c');
+  document.documentElement.style.setProperty('--menu-accent-2', s.accent2_color || '#8c5c36');
+  document.documentElement.style.setProperty('--menu-muted', s.muted_color || '#d9c9b8');
+  document.documentElement.style.setProperty('--menu-category-image-opacity', String(Math.max(0, Math.min(100, Number(s.category_image_opacity || 50))) / 100));
+}
+
+function hexToRgba(hex, alpha) {
+  const cleaned = String(hex || '#000').replace('#', '');
+  const expanded = cleaned.length === 3 ? cleaned.split('').map(c => c + c).join('') : cleaned;
+  const bigint = parseInt(expanded, 16) || 0;
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function renderMenu() {
-  setWorkspace(`<div class="panel"><div class="panel-body">Menupagina blijft ongewijzigd.</div></div>`);
+  applyMenuStyles();
+  const s = settingsMap();
+  const grouped = groupedRecipes();
+  const shop = shopData();
+
+  setSidebar(`
+    <div class="panel">
+      <div class="panel-head"><h3>Layout & stijl</h3></div>
+      <div class="panel-body stack">
+        <form id="menuStyleForm" class="form-grid">
+          <div class="full"><label>Footer links</label><input name="footer_left" value="${esc(s.footer_left || '')}"></div>
+          <div class="full"><label>Footer rechts</label><input name="footer_right" value="${esc(s.footer_right || '')}"></div>
+          <div><label>Canvas kleur</label><input type="color" name="canvas_bg_color" value="${esc(s.canvas_bg_color || '#1b1715')}"></div>
+          <div><label>Paneelkleur</label><input type="color" name="panel_color" value="${esc(s.panel_color || '#241d19')}"></div>
+          <div><label>Paneeldekking</label><input type="number" min="0" max="100" name="panel_opacity" value="${esc(s.panel_opacity || '94')}"></div>
+          <div><label>Tekstkleur</label><input type="color" name="chalk_color" value="${esc(s.chalk_color || '#f7f1e8')}"></div>
+          <div><label>Accent</label><input type="color" name="accent_color" value="${esc(s.accent_color || '#f0b04c')}"></div>
+          <div><label>Accent 2</label><input type="color" name="accent2_color" value="${esc(s.accent2_color || '#8c5c36')}"></div>
+          <div><label>Subtekstkleur</label><input type="color" name="muted_color" value="${esc(s.muted_color || '#d9c9b8')}"></div>
+          <div><label>Opacity categoriebeeld</label><input type="number" min="0" max="100" name="category_image_opacity" value="${esc(s.category_image_opacity || '50')}"></div>
+          <div><label>Achtergrondafbeelding</label>${imageSelect('menuBackgroundImage', 'menu', s.menu_background_image || '')}</div>
+          <div><label>Logo menukaart</label>${imageSelect('menuLogoImage', 'logo', s.menu_logo_image || shop.logo || '')}</div>
+          <div class="full row">
+            <button class="btn" type="submit">Stijl opslaan</button>
+            <button class="btn secondary" type="button" id="menuRefreshBtn">Herlaad preview</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `);
+
+  const bg = resolveImage(s.menu_background_image || '', false);
+  const menuLogo = resolveImage(s.menu_logo_image || shop.logo || '', false);
+
+  setWorkspace(`
+    <div class="menu-board ${bg ? 'has-bg' : ''}" style="${bg ? `--menu-bg-image:url('${bg}')` : ''}">
+      <div class="menu-head">
+        <div class="menu-logo">${menuLogo ? `<img src="${esc(menuLogo)}" alt="Logo">` : 'GH'}</div>
+        <div>
+          <div class="menu-brand">${esc(shop.name || "'t Gezellig Hoekje")}</div>
+          <div class="menu-sub">${esc(shop.subtitle || 'Koffiebar & Gebak')}</div>
+          <div class="menu-tag">${esc(shop.tagline || '')}</div>
+        </div>
+      </div>
+
+      <div class="menu-grid">
+        <div class="menu-card">
+          <h3>Menukaart</h3>
+          <div class="menu-sections">
+            ${allCategories().map(cat => {
+              const items = grouped[cat] || [];
+              const catImg = (APP.data.images || []).find(i => i.scope === 'category' && i.name === cat);
+              return `
+                <div class="menu-section">
+                  ${catImg ? `<img class="section-image" src="${esc(resolveImage(catImg.id, false))}" alt="">` : ''}
+                  <h4>${esc(cat)}</h4>
+                  ${items.map(r => `
+                    <div class="menu-entry">
+                      <div>
+                        <b>${esc(r.name)}</b>
+                        <small>${esc(r.sub || r.subtitle || '')}</small>
+                      </div>
+                      <strong>${money(r.sellPrice || r.sell_price)}</strong>
+                    </div>
+                  `).join('') || '<div class="muted small">Nog geen items.</div>'}
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div class="footer-note">${esc(s.footer_left || '')} · ${esc(s.footer_right || '')}</div>
+        </div>
+
+        <div class="box-card">
+          <h3>Boxmenu&apos;s</h3>
+          <div class="boxes">
+            ${(APP.data.boxes || []).filter(b => asBool(b.active)).map(b => `
+              <div class="item-card">
+                <div class="row">
+                  ${thumb(b.image, false)}
+                  <div>
+                    <h4>${esc(b.name)}</h4>
+                    <div class="muted small">${esc(b.theme || '')}</div>
+                  </div>
+                </div>
+                <ul>${(b.items || []).map(id => `<li>${esc(recipeById(id)?.name || id)}</li>`).join('')}</ul>
+                <div class="promo">Promo ${money(b.price || computeBoxPrice(b))}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `);
+
+  document.getElementById('menuStyleForm').onsubmit = saveMenuStyleForm;
+  document.getElementById('menuRefreshBtn').onclick = async () => {
+    await loadAllData();
+    renderMenu();
+  };
+}
+
+async function saveMenuStyleForm(e) {
+  e.preventDefault();
+  const f = e.currentTarget;
+  const map = settingsMap();
+
+  const updates = {
+    footer_left: f.elements.footer_left.value,
+    footer_right: f.elements.footer_right.value,
+    canvas_bg_color: f.elements.canvas_bg_color.value,
+    panel_color: f.elements.panel_color.value,
+    panel_opacity: f.elements.panel_opacity.value,
+    chalk_color: f.elements.chalk_color.value,
+    accent_color: f.elements.accent_color.value,
+    accent2_color: f.elements.accent2_color.value,
+    muted_color: f.elements.muted_color.value,
+    category_image_opacity: f.elements.category_image_opacity.value,
+    menu_background_image: document.getElementById('menuBackgroundImage').value,
+    menu_logo_image: document.getElementById('menuLogoImage').value
+  };
+
+  const merged = { ...map, ...updates };
+  const rows = Object.entries(merged).map(([key, value]) => ({ key, value }));
+
+  await apiPost('menuSettings.save', rows);
+  await loadAllData();
+  renderMenu();
+}
+
+function fillImageForm(id) {
+  const img = imageRecordValue(id);
+  if (!img) return;
+
+  const f = document.getElementById('imageForm');
+  f.dataset.editingId = img.id;
+  f.elements.name.value = img.name || '';
+  f.elements.id.value = img.id || '';
+  f.elements.id.disabled = true;
+  f.elements.scope.value = img.scope || 'global';
+  f.elements.file_name.value = img.fileName || img.file_name || '';
+  f.elements.data_url.value = img.dataUrl || img.data_url || '';
+  f.elements.notes.value = img.notes || '';
+}
+
+async function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
 }
 
 function renderImages() {
-  setWorkspace(`<div class="panel"><div class="panel-body">Afbeeldingenpagina blijft ongewijzigd.</div></div>`);
+  const rows = [...(APP.data.images || [])].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'nl'));
+
+  setSidebar(`
+    <div class="panel">
+      <div class="panel-head"><h3>Nieuwe afbeelding</h3></div>
+      <div class="panel-body">
+        <form id="imageForm" class="stack">
+          <div class="form-grid">
+            <div class="full"><label>Naam</label><input name="name" required></div>
+            <div><label>Code</label><input name="id" required></div>
+            <div>
+              <label>Scope</label>
+              <select name="scope">
+                <option value="ingredient">ingredient</option>
+                <option value="recipe">recipe</option>
+                <option value="box">box</option>
+                <option value="menu">menu</option>
+                <option value="logo">logo</option>
+                <option value="category">category</option>
+                <option value="global">global</option>
+              </select>
+            </div>
+            <div><label>Bestandsnaam / pad</label><input name="file_name" placeholder="voorbeeld.png"></div>
+            <div class="full"><label>Upload bestand</label><input type="file" id="imageUpload" accept="image/*"></div>
+            <div class="full"><label>Of plak data-url / absolute url</label><textarea name="data_url" placeholder="data:image/png;base64,... of https://..."></textarea></div>
+            <div class="full"><label>Notitie</label><textarea name="notes"></textarea></div>
+          </div>
+          <div class="row">
+            <button class="btn" type="submit">Opslaan</button>
+            <button class="btn secondary" type="button" id="imageResetBtn">Reset</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `);
+
+  setWorkspace(`
+    <div class="panel">
+      <div class="panel-head"><h2>Afbeeldingenbibliotheek</h2><div class="pill">${rows.length} items</div></div>
+      <div class="panel-body stack">
+        ${rows.length ? rows.map(img => `
+          <div class="item-card">
+            <div class="row wrap" style="justify-content:space-between; align-items:flex-start;">
+              <div class="row">
+                ${thumb(img.id, false)}
+                <div>
+                  <h4>${esc(img.name)}</h4>
+                  <div class="muted small">${esc(img.scope || '')}</div>
+                  <div class="muted small">${esc(img.fileName || img.file_name || '')}</div>
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn secondary" data-image-edit="${img.id}">Bewerk</button>
+                <button class="btn danger" data-image-delete="${img.id}">Verwijder</button>
+              </div>
+            </div>
+          </div>
+        `).join('') : `<div class="item-card muted">Nog geen afbeeldingen gevonden.</div>`}
+      </div>
+    </div>
+  `);
+
+  document.getElementById('imageForm').onsubmit = saveImageForm;
+  document.getElementById('imageResetBtn').onclick = () => renderImages();
+
+  document.querySelectorAll('[data-image-edit]').forEach(btn => {
+    btn.onclick = () => fillImageForm(btn.dataset.imageEdit);
+  });
+
+  document.querySelectorAll('[data-image-delete]').forEach(btn => {
+    btn.onclick = () => deleteImage(btn.dataset.imageDelete);
+  });
+}
+
+async function saveImageForm(e) {
+  e.preventDefault();
+  const f = e.currentTarget;
+  let dataUrl = f.elements.data_url.value.trim();
+
+  const file = document.getElementById('imageUpload').files?.[0];
+  if (file) dataUrl = await readFileAsDataUrl(file);
+
+  const data = {
+    id: f.dataset.editingId || f.elements.id.value.trim(),
+    name: f.elements.name.value.trim(),
+    scope: f.elements.scope.value,
+    fileName: f.elements.file_name.value.trim(),
+    dataUrl,
+    active: true,
+    notes: f.elements.notes.value.trim()
+  };
+
+  await apiPost('images.save', data);
+  await loadAllData();
+  renderImages();
+}
+
+async function deleteImage(id) {
+  if (!confirm('Afbeelding verwijderen?')) return;
+  await apiPost('images.delete', { id });
+  await loadAllData();
+  renderImages();
 }
 
 function renderSettings() {
-  setWorkspace(`<div class="panel"><div class="panel-body">Instellingenpagina blijft ongewijzigd.</div></div>`);
+  const shop = shopData();
+
+  setSidebar(`
+    <div class="panel">
+      <div class="panel-head"><h3>Shopinstellingen</h3></div>
+      <div class="panel-body">
+        <form id="shopForm" class="stack">
+          <label>Naam</label>
+          <input name="name" value="${esc(shop.name || '')}">
+
+          <label>Ondertitel</label>
+          <input name="subtitle" value="${esc(shop.subtitle || '')}">
+
+          <label>Slogan</label>
+          <input name="tagline" value="${esc(shop.tagline || '')}">
+
+          <label>Logo</label>
+          ${imageSelect('shopLogo', 'logo', shop.logo || '')}
+
+          <div class="row">
+            <button class="btn" type="submit">Opslaan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>API-verbinding</h3></div>
+      <div class="panel-body stack">
+        <button class="btn secondary" id="testApiBtn">Verbinding testen</button>
+        <div id="apiResult" class="hint">Klik op de knop om de verbinding te testen.</div>
+      </div>
+    </div>
+  `);
+
+  setWorkspace(`
+    <div class="panel">
+      <div class="panel-head"><h2>API info</h2></div>
+      <div class="panel-body stack">
+        <div class="item-card">
+          <strong>Apps Script URL</strong>
+          <div class="small muted">${esc(window.GEZELLIG_CONFIG.API_URL)}</div>
+        </div>
+      </div>
+    </div>
+  `);
+
+  document.getElementById('shopForm').onsubmit = saveShopForm;
+  document.getElementById('testApiBtn').onclick = testApi;
+}
+
+async function saveShopForm(e) {
+  e.preventDefault();
+  const f = e.currentTarget;
+  const map = settingsMap();
+
+  const merged = {
+    ...map,
+    brand_name: f.elements.name.value.trim(),
+    subtitle: f.elements.subtitle.value.trim(),
+    tagline: f.elements.tagline.value.trim(),
+    menu_logo_image: document.getElementById('shopLogo').value
+  };
+
+  const rows = Object.entries(merged).map(([key, value]) => ({ key, value }));
+  await apiPost('menuSettings.save', rows);
+  await loadAllData();
+  renderSettings();
+}
+
+async function testApi() {
+  const out = document.getElementById('apiResult');
+  try {
+    const data = await apiGet('health');
+    out.className = 'okline';
+    out.textContent = `Verbinding ok. Spreadsheet: ${data.spreadsheet || 'OK'}. Tijdstip: ${data.timestamp || ''}`;
+    setLiveStatus('ok', 'Live gekoppeld');
+  } catch (err) {
+    out.className = 'badline';
+    out.textContent = `Verbinding mislukt: ${err.message}`;
+    setLiveStatus('bad', 'Verbinding mislukt');
+  }
 }
 
 async function renderPage() {
