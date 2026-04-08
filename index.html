@@ -577,6 +577,10 @@
                   </select>
                 </div>
                 <div>
+                  <label for="ingUnit">Eenheid</label>
+                  <input id="ingUnit" value="${escapeHtml(editing?.unit || 'stuk')}">
+                </div>
+                <div>
                   <label for="ingPrice">Prijs</label>
                   <input id="ingPrice" type="number" min="0" step="0.01" value="${editing?.price ?? 0}">
                 </div>
@@ -587,6 +591,26 @@
                 <div>
                   <label for="ingMin">Minimumstock</label>
                   <input id="ingMin" type="number" min="0" step="1" value="${editing?.minStock ?? 0}">
+                </div>
+                <div>
+                  <label for="ingCaloriesPerProcessedPiece">Cal. per gesneden stuk</label>
+                  <input id="ingCaloriesPerProcessedPiece" type="number" min="0" step="0.01" value="${editing?.calories_per_processed_piece ?? editing?.caloriesPerProcessedPiece ?? 0}">
+                </div>
+                <div>
+                  <label for="ingProcessedYield">Aantal sneden / artikel</label>
+                  <input id="ingProcessedYield" type="number" min="0" step="1" value="${editing?.processed_yield ?? editing?.processedYield ?? 0}">
+                </div>
+                <div>
+                  <label for="ingPricePerProcessedPiece">Prijs per gesneden stuk</label>
+                  <input id="ingPricePerProcessedPiece" type="number" min="0" step="0.01" value="${editing?.price_per_processed_piece ?? editing?.pricePerProcessedPiece ?? 0}">
+                </div>
+                <div>
+                  <label for="ingWeightPerPieceG">Gewicht per stuk in gram</label>
+                  <input id="ingWeightPerPieceG" type="number" min="0" step="0.01" value="${editing?.weight_per_piece_g ?? editing?.weightPerPieceG ?? 0}">
+                </div>
+                <div>
+                  <label for="ingPricePerCalorie">Prijs per calorie</label>
+                  <input id="ingPricePerCalorie" type="number" min="0" step="0.0001" value="${editing?.price_per_calorie ?? editing?.pricePerCalorie ?? 0}">
                 </div>
               </div>
               <div class="row" style="margin-top:14px;">
@@ -796,7 +820,7 @@
           <div class="panel-body table-wrap">
             <table>
               <thead>
-                <tr><th>Naam</th><th>Type</th><th>Categorie</th><th>Leverancier</th><th>Prijs</th><th>Stock</th><th>Min</th><th>Acties</th></tr>
+                <tr><th>Naam</th><th>Type</th><th>Categorie</th><th>Leverancier</th><th>Prijs</th><th>Cal/stuk</th><th>Sneden</th><th>Prijs/snede</th><th>Gram/stuk</th><th>Prijs/cal</th><th>Stock</th><th>Min</th><th>Acties</th></tr>
               </thead>
               <tbody>
                 ${rows.map(item => `
@@ -806,6 +830,11 @@
                     <td>${escapeHtml(item.category)}</td>
                     <td>${escapeHtml(item.supplier)}</td>
                     <td>${formatMoney(item.price)}</td>
+                    <td>${Number(item.calories_per_processed_piece ?? item.caloriesPerProcessedPiece ?? 0) || ''}</td>
+                    <td>${Number(item.processed_yield ?? item.processedYield ?? 0) || ''}</td>
+                    <td>${Number(item.price_per_processed_piece ?? item.pricePerProcessedPiece ?? 0) ? formatMoney(item.price_per_processed_piece ?? item.pricePerProcessedPiece) : ''}</td>
+                    <td>${Number(item.weight_per_piece_g ?? item.weightPerPieceG ?? 0) || ''}</td>
+                    <td>${Number(item.price_per_calorie ?? item.pricePerCalorie ?? 0) || ''}</td>
                     <td class="${Number(item.stock||0) < Number(item.minStock||0) ? 'status-bad' : ''}">${item.stock}</td>
                     <td>${item.minStock}</td>
                     <td>
@@ -1107,10 +1136,15 @@
         type: document.getElementById('ingType').value,
         category: document.getElementById('ingCategory').value.trim() || 'Algemeen',
         supplier: document.getElementById('ingSupplier').value,
-        unit: 'stuk',
+        unit: document.getElementById('ingUnit').value.trim() || 'stuk',
         price: Number(document.getElementById('ingPrice').value || 0),
         stock: Number(document.getElementById('ingStock').value || 0),
         minStock: Number(document.getElementById('ingMin').value || 0),
+        calories_per_processed_piece: Number(document.getElementById('ingCaloriesPerProcessedPiece').value || 0),
+        processed_yield: Number(document.getElementById('ingProcessedYield').value || 0),
+        price_per_processed_piece: Number(document.getElementById('ingPricePerProcessedPiece').value || 0),
+        weight_per_piece_g: Number(document.getElementById('ingWeightPerPieceG').value || 0),
+        price_per_calorie: Number(document.getElementById('ingPricePerCalorie').value || 0),
         active: true
       };
       if (app.editingIngredientId) {
