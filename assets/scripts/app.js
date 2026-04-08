@@ -125,11 +125,19 @@ function computeBoxPrice(box){
 function groupedRecipes(){
   return (APP.data.recipes || []).filter(r => asBool(r.active) && asBool(r.visibleOnMenu ?? r.visible_on_menu)).reduce((acc,r)=>{ const k=r.category||'Overig'; (acc[k] ||= []).push(r); return acc; }, {});
 }
+
+function navHref(key){
+  const inPagesFolder = APP.page !== 'dashboard';
+  if (key === 'dashboard') return inPagesFolder ? '../index.html' : 'index.html';
+  return inPagesFolder ? `${key}.html` : `pages/${key}.html`;
+}
+
 function renderNav(){
   const nav = document.getElementById('nav'); if (!nav) return;
   const items=['dashboard','ingredients','recipes','boxes','stock','menu','images','settings'];
-  nav.innerHTML = items.map(key => { const href = key==='dashboard' ? 'index.html' : `${key}.html`; return `<a class="nav-link ${APP.page===key?'active':''}" href="${href}">${esc(PAGE_META[key].title)}</a>`; }).join('');
+  nav.innerHTML = items.map(key => `<a class="nav-link ${APP.page===key?'active':''}" href="${navHref(key)}">${esc(PAGE_META[key].title)}</a>`).join('');
 }
+
 function fillHeader(){
   renderNav();
   const meta = PAGE_META[APP.page] || PAGE_META.dashboard;
