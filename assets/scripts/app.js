@@ -24,7 +24,7 @@ const PAGE_META = {
   settings: { title: 'Shopinstellingen', intro: 'Beheer shopinstellingen en test de API-verbinding.' }
 };
 
-const DRINK_ALLOWED = new Set(['Dranken','Fruit','Groenten','Zuivel','Thee','Chocolademelk','Toppings']);
+const DRINK_ALLOWED = new Set(['Dranken', 'Fruit', 'Groenten', 'Zuivel', 'Thee', 'Chocolademelk', 'Toppings']);
 
 const TYPE_OPTIONS = [
   { value: 'raw', label: 'Grondstof' },
@@ -33,13 +33,29 @@ const TYPE_OPTIONS = [
   { value: 'purchased_finished', label: 'Aangekocht' }
 ];
 
+const PRODUCT_TYPE_OPTIONS = [
+  { value: 'drink', label: 'Drankje' },
+  { value: 'snack', label: 'Hapje' },
+  { value: 'main', label: 'Hoofdgerecht' }
+];
+
+const ANIMATION_OPTIONS = [
+  'coffee',
+  'cup',
+  'sandwich',
+  'donut',
+  'bagel',
+  'dinner',
+  'burger'
+];
+
 function esc(text) {
   return String(text ?? '').replace(/[&<>"']/g, s => ({
-    '&':'&amp;',
-    '<':'&lt;',
-    '>':'&gt;',
-    '"':'&quot;',
-    "'":'&#39;'
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
   }[s]));
 }
 
@@ -63,6 +79,11 @@ function asBool(v) {
 
 function typeLabel(type) {
   const found = TYPE_OPTIONS.find(t => t.value === type);
+  return found ? found.label : (type || '');
+}
+
+function productTypeLabel(type) {
+  const found = PRODUCT_TYPE_OPTIONS.find(t => t.value === type);
   return found ? found.label : (type || '');
 }
 
@@ -113,7 +134,6 @@ function itemImageUrl(item, recipeMode = false) {
   if (!val) return '';
 
   if (/^https?:/i.test(val) || val.startsWith('data:') || val.startsWith('/')) return val;
-
   if (val.includes('/')) return assetPath(val);
 
   const base = recipeMode ? window.GEZELLIG_CONFIG.RECIPE_IMAGE_BASE : window.GEZELLIG_CONFIG.IMAGE_BASE;
@@ -284,12 +304,16 @@ function fillHeader() {
   const brandName = document.getElementById('brandName');
   const brandSub = document.getElementById('brandSub');
   const pageTitle = document.getElementById('pageTitle');
+  const sidebarTitle = document.getElementById('sidebarTitle');
+  const sidebarIntro = document.getElementById('sidebarIntro');
   const shop = shopData();
 
   if (logo) logo.innerHTML = shop.logo ? `<img src="${esc(resolveImage(shop.logo, false))}" alt="Logo">` : 'GH';
   if (brandName) brandName.textContent = shop.name || "'t Gezellig Hoekje";
   if (brandSub) brandSub.textContent = `${shop.subtitle || 'Koffiebar & Gebak'} · live koppeling`;
   if (pageTitle) pageTitle.textContent = PAGE_META[APP.page]?.title || 'Dashboard';
+  if (sidebarTitle) sidebarTitle.textContent = PAGE_META[APP.page]?.title || 'Laden...';
+  if (sidebarIntro) sidebarIntro.textContent = PAGE_META[APP.page]?.intro || 'Even geduld.';
 }
 
 function setSidebar(html) {
@@ -317,7 +341,19 @@ function generateUniqueIngredientId(name) {
     candidate = `${base}_${index}`;
     index += 1;
   }
+  return candidate;
+}
 
+function generateUniqueRecipeId(name) {
+  const base = slugify(name);
+  if (!base) return `recipe_${Date.now()}`;
+  let candidate = base;
+  let index = 2;
+
+  while (APP.recipesMap.has(candidate)) {
+    candidate = `${base}_${index}`;
+    index += 1;
+  }
   return candidate;
 }
 
@@ -327,32 +363,24 @@ function ingredientTypeOptions(current = 'raw') {
   ).join('');
 }
 
-function computePlanRows() {
-  const plan = APP.data.plan || [];
-  const needMap = new Map();
+function productTypeOptions(current = 'drink') {
+  return PRODUCT_TYPE_OPTIONS.map(opt =>
+    `<option value="${esc(opt.value)}" ${current === opt.value ? 'selected' : ''}>${esc(opt.label)}</option>`
+  ).join('');
+}
 
-  plan.forEach(entry => {
-    const recipe = recipeById(entry.recipeId);
-    if (!recipe) return;
-    (recipe.ingredients || []).forEach(line => {
-      needMap.set(line.id, (needMap.get(line.id) || 0) + Number(line.amount || 0) * Number(entry.amount || 0));
-    });
-  });
+function animationOptions(current = 'coffee') {
+  return ANIMATION_OPTIONS.map(opt =>
+    `<option value="${esc(opt)}" ${current === opt ? 'selected' : ''}>${esc(opt)}</option>`
+  ).join('');
+}
 
-  return [...needMap.entries()].map(([id, need]) => {
-    const ing = ingredientById(id) || { name: id, supplier: 'onbekend', stock: 0, price: 0 };
-    const stock = Number(ing.stock || 0);
-    const buy = Math.max(0, need - stock);
-    return {
-      id,
-      name: ing.name,
-      supplier: ing.supplier,
-      need,
-      stock,
-      buy,
-      subtotal: buy * Number(ing.price || 0)
-    };
-  }).sort((a, b) => a.name.localeCompare(b.name, 'nl'));
+function imageSelect(id, scope, current = '') {
+  const opts = (APP.data.images || [])
+    .filter(i => !scope || i.scope === scope || i.scope === 'global')
+    .map(i => `<option value="${esc(i.id)}" ${current === i.id ? 'selected' : ''}>${esc(i.name)}</option>`)
+    .join('');
+  return `<select id="${id}" name="image"><option value="">Geen</option>${opts}</select>`;
 }
 
 function renderDashboard() {
@@ -385,79 +413,34 @@ function renderDashboard() {
   setWorkspace(`
     <div class="dashboard-grid">
       <div class="cards dashboard-stats">
-        <div class="metric">
-          <small>Ingrediënten</small>
-          <strong>${ingredients.length}</strong>
-          <span>Totaal in databron</span>
-        </div>
-
-        <div class="metric">
-          <small>Recepten</small>
-          <strong>${recipes.length}</strong>
-          <span>Totaal in databron</span>
-        </div>
-
-        <div class="metric">
-          <small>Toegevoegd aan menu</small>
-          <strong>${menuVisible.length}</strong>
-          <span>Zichtbaar op menukaart</span>
-        </div>
-
-        <div class="metric">
-          <small>Niet op menu</small>
-          <strong>${menuHidden.length}</strong>
-          <span>Verborgen recepten</span>
-        </div>
-
-        <div class="metric">
-          <small>Promo boxen</small>
-          <strong>${boxes.length}</strong>
-          <span>Actieve boxen</span>
-        </div>
-
-        <div class="metric">
-          <small>Stock tekorten</small>
-          <strong>${lowStock.length}</strong>
-          <span>Onder minimumstock</span>
-        </div>
+        <div class="metric"><small>Ingrediënten</small><strong>${ingredients.length}</strong><span>Totaal in databron</span></div>
+        <div class="metric"><small>Recepten</small><strong>${recipes.length}</strong><span>Totaal in databron</span></div>
+        <div class="metric"><small>Toegevoegd aan menu</small><strong>${menuVisible.length}</strong><span>Zichtbaar op menukaart</span></div>
+        <div class="metric"><small>Niet op menu</small><strong>${menuHidden.length}</strong><span>Verborgen recepten</span></div>
+        <div class="metric"><small>Promo boxen</small><strong>${boxes.length}</strong><span>Actieve boxen</span></div>
+        <div class="metric"><small>Stock tekorten</small><strong>${lowStock.length}</strong><span>Onder minimumstock</span></div>
       </div>
 
       <div class="dashboard-bottom">
         <div class="panel">
-          <div class="panel-head">
-            <h2>Stockwaarschuwingen</h2>
-          </div>
+          <div class="panel-head"><h2>Stockwaarschuwingen</h2></div>
           <div class="panel-body stack">
             ${lowStock.length
-              ? lowStock.map(i => `
-                <div class="warnline">${esc(i.name)} onder minimumstock (${i.stock}/${i.minStock})</div>
-              `).join('')
+              ? lowStock.map(i => `<div class="warnline">${esc(i.name)} onder minimumstock (${i.stock}/${i.minStock})</div>`).join('')
               : `<div class="okline">Geen stockwaarschuwingen.</div>`
             }
           </div>
         </div>
 
         <div class="panel">
-          <div class="panel-head">
-            <h2>Huidige menukaart</h2>
-          </div>
+          <div class="panel-head"><h2>Huidige menukaart</h2></div>
           <div class="panel-body">
-            <div class="dashboard-menu-grid">
-              ${currentMenuHtml}
-            </div>
+            <div class="dashboard-menu-grid">${currentMenuHtml}</div>
           </div>
         </div>
       </div>
     </div>
   `);
-}
-
-function imageSelect(id, scope, current = '') {
-  const opts = (APP.data.images || [])
-    .filter(i => !scope || i.scope === scope || i.scope === 'global')
-    .map(i => `<option value="${esc(i.id)}" ${current === i.id ? 'selected' : ''}>${esc(i.name)}</option>`)
-    .join('');
-  return `<select id="${id}" name="image"><option value="">Geen</option>${opts}</select>`;
 }
 
 function renderIngredients() {
@@ -486,7 +469,6 @@ function renderIngredients() {
           <div class="full"><label>Notitie</label><textarea name="note"></textarea></div>
           <div class="full row"><button class="btn" type="submit">Opslaan</button><button class="btn secondary" type="button" id="ingredientResetBtn">Reset</button></div>
         </form>
-        <div id="ingredientFormStatus" class="small muted"></div>
       </div>
     </div>
   `);
@@ -632,13 +614,6 @@ function recipeLine(prefill = {}, productType = 'drink') {
   `;
 }
 
-function addRecipeLine(prefill) {
-  const wrap = document.getElementById('recipeLines');
-  wrap.insertAdjacentHTML('beforeend', recipeLine(prefill, document.getElementById('recipeType').value));
-  bindRecipeLineEvents();
-  updateRecipeComputed();
-}
-
 function bindRecipeLineEvents() {
   document.querySelectorAll('.removeRecipeLine').forEach(b => b.onclick = () => {
     b.closest('.recipe-line').remove();
@@ -647,8 +622,17 @@ function bindRecipeLineEvents() {
   document.querySelectorAll('.recipeIngSelect,.recipeIngAmount').forEach(el => el.oninput = updateRecipeComputed);
 }
 
+function addRecipeLine(prefill = {}) {
+  const wrap = document.getElementById('recipeLines');
+  if (!wrap) return;
+  const productType = document.getElementById('recipeType')?.value || 'drink';
+  wrap.insertAdjacentHTML('beforeend', recipeLine(prefill, productType));
+  bindRecipeLineEvents();
+  updateRecipeComputed();
+}
+
 function updateRecipeSelectOptions() {
-  const type = document.getElementById('recipeType').value;
+  const type = document.getElementById('recipeType')?.value || 'drink';
   document.querySelectorAll('.recipeIngSelect').forEach(sel => {
     const current = sel.value;
     sel.innerHTML = recipeIngredientOptions(type, current);
@@ -665,8 +649,8 @@ function updateRecipeComputed() {
 
   const temp = {
     ingredients: lines,
-    sellPrice: Number(document.getElementById('recipePrice').value || 0),
-    productType: document.getElementById('recipeType').value
+    sellPrice: Number(document.getElementById('recipePrice')?.value || 0),
+    productType: document.getElementById('recipeType')?.value || 'drink'
   };
 
   const calc = calculateRecipeCalories(temp);
@@ -678,7 +662,7 @@ function updateRecipeComputed() {
     out.innerHTML = `
       <div class="item-card">
         <strong>Calorievergelijking</strong>
-        <div class="small muted">${calc.toFixed(0)}/${target}</div>
+        <div class="small muted">${calc.toFixed(0)} / ${target}</div>
       </div>
       <div class="item-card">
         <strong>Kostprijs</strong>
@@ -688,6 +672,173 @@ function updateRecipeComputed() {
   }
 }
 
+function renderRecipes() {
+  const rows = [...(APP.data.recipes || [])].sort((a, b) =>
+    (a.category || '').localeCompare(b.category || '', 'nl') || a.name.localeCompare(b.name, 'nl')
+  );
+
+  setSidebar(`
+    <div class="panel">
+      <div class="panel-head"><h3>Nieuw recept</h3></div>
+      <div class="panel-body stack">
+        <form id="recipeForm" class="stack">
+          <div class="form-grid">
+            <div class="full">
+              <label>Naam</label>
+              <input name="name" id="recipeNameInput" required>
+            </div>
+
+            <div>
+              <label>Code</label>
+              <input name="id" id="recipeCodeInput" readonly placeholder="Wordt automatisch gegenereerd">
+            </div>
+
+            <div>
+              <label>Subtitel</label>
+              <input name="sub">
+            </div>
+
+            <div>
+              <label>Categorie</label>
+              <input name="category" placeholder="bv. Koffie, Tosti's, Thee">
+            </div>
+
+            <div>
+              <label>Type</label>
+              <select id="recipeType" name="productType">${productTypeOptions('drink')}</select>
+            </div>
+
+            <div>
+              <label>Station</label>
+              <select name="station">
+                <option value="drankje maken">Drankje maken</option>
+                <option value="eten maken">Eten maken</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Animatie</label>
+              <select name="animation">${animationOptions('coffee')}</select>
+            </div>
+
+            <div>
+              <label>Verkoopprijs</label>
+              <input id="recipePrice" type="number" min="0" step="0.01" name="sellPrice" value="0">
+            </div>
+
+            <div>
+              <label>Afbeelding</label>
+              ${imageSelect('recipeImage', 'recipe')}
+            </div>
+
+            <div class="full row wrap">
+              <label class="row" style="width:auto;">
+                <input type="checkbox" name="visibleOnMenu" checked style="width:auto;">
+                zichtbaar op menukaart
+              </label>
+              <label class="row" style="width:auto;">
+                <input type="checkbox" name="active" checked style="width:auto;">
+                actief
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label>Ingrediënten</label>
+            <div id="recipeLines" class="stack"></div>
+            <div class="row" style="margin-top:8px;">
+              <button class="btn secondary" type="button" id="addRecipeLineBtn">Ingrediëntregel toevoegen</button>
+            </div>
+            <div class="hint">
+              Dranken tonen enkel drank-/fruit-/groente-/zuivel-/toppingingrediënten.
+              Hapjes en hoofdgerechten tonen de volledige ingrediëntenlijst.
+            </div>
+          </div>
+
+          <div id="recipeComputed" class="grid-2"></div>
+
+          <div class="row">
+            <button class="btn" type="submit">Opslaan</button>
+            <button class="btn secondary" type="button" id="recipeResetBtn">Reset</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `);
+
+  setWorkspace(`
+    <div class="panel">
+      <div class="panel-head"><h2>Receptenoverzicht</h2><div class="pill">${rows.length} recepten</div></div>
+      <div class="panel-body stack">
+        ${rows.length ? rows.map(r => {
+          const st = recipeStatus(r);
+          const calc = calculateRecipeCalories(r);
+          const target = targetCalories(r.productType || r.product_type);
+          return `
+            <div class="item-card">
+              <div class="row wrap" style="justify-content:space-between; align-items:flex-start;">
+                <div class="row">
+                  ${thumb(r.image, true)}
+                  <div>
+                    <h4>${esc(r.name)}</h4>
+                    <div class="muted small">${esc(r.sub || r.subtitle || '')}</div>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="btn secondary" data-recipe-edit="${r.id}">Bewerk</button>
+                  <button class="btn danger" data-recipe-delete="${r.id}">Verwijder</button>
+                </div>
+              </div>
+              <div class="item-meta">
+                <span>${esc(r.category || '')}</span>
+                <span>${esc(productTypeLabel(r.productType || r.product_type || ''))}</span>
+                <span>${asBool(r.visibleOnMenu ?? r.visible_on_menu) ? 'Op kaart' : 'Verborgen'}</span>
+                <span>${asBool(r.active) ? 'Actief' : 'Inactief'}</span>
+                <span>${money(r.sellPrice || r.sell_price)}</span>
+                <span>${money(calculateRecipeCost(r))}</span>
+                <span>${calc.toFixed(0)} / ${target} cal</span>
+                <span class="${st.cls}">${esc(st.label)}</span>
+              </div>
+              <div class="footer-note">
+                Ingrediënten:
+                ${(r.ingredients || []).map(l => `${esc(ingredientById(l.id)?.name || l.id)} × ${l.amount}`).join(', ')}
+              </div>
+            </div>
+          `;
+        }).join('') : `<div class="item-card muted">Nog geen recepten gevonden.</div>`}
+      </div>
+    </div>
+  `);
+
+  const form = document.getElementById('recipeForm');
+  const nameInput = document.getElementById('recipeNameInput');
+  const codeInput = document.getElementById('recipeCodeInput');
+
+  function refreshRecipeCode() {
+    if (form.dataset.editingId) return;
+    codeInput.value = generateUniqueRecipeId(nameInput.value.trim());
+  }
+
+  nameInput.addEventListener('input', refreshRecipeCode);
+  refreshRecipeCode();
+
+  form.onsubmit = saveRecipeForm;
+  document.getElementById('addRecipeLineBtn').onclick = () => addRecipeLine({});
+  document.getElementById('recipeType').onchange = updateRecipeSelectOptions;
+  document.getElementById('recipePrice').oninput = updateRecipeComputed;
+  document.getElementById('recipeResetBtn').onclick = () => renderRecipes();
+
+  addRecipeLine({});
+
+  document.querySelectorAll('[data-recipe-edit]').forEach(btn => {
+    btn.onclick = () => fillRecipeForm(btn.dataset.recipeEdit);
+  });
+
+  document.querySelectorAll('[data-recipe-delete]').forEach(btn => {
+    btn.onclick = () => deleteRecipe(btn.dataset.recipeDelete);
+  });
+}
+
 function fillRecipeForm(id) {
   const r = recipeById(id);
   if (!r) return;
@@ -695,10 +846,11 @@ function fillRecipeForm(id) {
   const form = document.getElementById('recipeForm');
   form.dataset.editingId = r.id;
   form.elements.name.value = r.name || '';
+  form.elements.id.value = r.id || '';
   form.elements.sub.value = r.sub || r.subtitle || '';
   form.elements.category.value = r.category || '';
   form.elements.productType.value = r.productType || r.product_type || 'drink';
-  form.elements.station.value = r.station || '';
+  form.elements.station.value = r.station || 'drankje maken';
   form.elements.animation.value = r.animation || 'coffee';
   form.elements.sellPrice.value = r.sellPrice || r.sell_price || 0;
   form.elements.visibleOnMenu.checked = asBool(r.visibleOnMenu ?? r.visible_on_menu);
@@ -711,8 +863,43 @@ function fillRecipeForm(id) {
   updateRecipeComputed();
 }
 
-function renderRecipes() {
-  setWorkspace(`<div class="panel"><div class="panel-body">Receptenpagina blijft ongewijzigd.</div></div>`);
+async function saveRecipeForm(e) {
+  e.preventDefault();
+  const form = e.currentTarget;
+
+  const ingredients = [...document.querySelectorAll('#recipeLines .recipe-line')]
+    .map(row => ({
+      id: row.querySelector('.recipeIngSelect').value,
+      amount: Number(row.querySelector('.recipeIngAmount').value || 0)
+    }))
+    .filter(l => l.id && l.amount > 0);
+
+  const data = {
+    id: form.dataset.editingId || generateUniqueRecipeId(form.elements.name.value.trim()),
+    name: form.elements.name.value.trim(),
+    sub: form.elements.sub.value.trim(),
+    category: form.elements.category.value.trim(),
+    productType: form.elements.productType.value,
+    station: form.elements.station.value,
+    animation: form.elements.animation.value,
+    sellPrice: Number(form.elements.sellPrice.value || 0),
+    calories: Number(calculateRecipeCalories({ ingredients }).toFixed(0)),
+    visibleOnMenu: form.elements.visibleOnMenu.checked,
+    active: form.elements.active.checked,
+    image: document.getElementById('recipeImage').value,
+    ingredients
+  };
+
+  await apiPost('recipes.save', data);
+  await loadAllData();
+  renderRecipes();
+}
+
+async function deleteRecipe(id) {
+  if (!confirm('Recept verwijderen?')) return;
+  await apiPost('recipes.delete', { id });
+  await loadAllData();
+  renderRecipes();
 }
 
 function renderBoxes() {
