@@ -1,8 +1,8 @@
 window.GEZELLIG_CONFIG = Object.assign({
   API_URL: 'https://script.google.com/macros/s/AKfycbwhrWNby9HVYPx-e01-eBPAOsRZbQfJtIgtcyHpPEP-q5Vo8eG28N4GB4OQSMwI6Ygq7A/exec',
   API_TOKEN: 'COFFEE_HOOK_0804',
-  IMAGE_BASE: '/afbeeldingen',
-  RECIPE_IMAGE_BASE: '/afbeeldingen/recepten'
+  IMAGE_BASE: 'assets/images/raw',
+  RECIPE_IMAGE_BASE: 'assets/images/recepies'
 }, window.GEZELLIG_CONFIG || {});
 
 const APP = {
@@ -35,7 +35,7 @@ function itemImageUrl(item, recipeMode=false){
   const val = item?.image || item?.fileName || item?.file_name || '';
   if (item?.dataUrl || item?.data_url) return item.dataUrl || item.data_url;
   if (!val) return '';
-  if (/^https?:/i.test(val) || val.startsWith('/') || val.startsWith('data:')) return val;
+  if (/^https?:/i.test(val) || val.startsWith('/') || val.startsWith('data:') || val.includes('/')) return val;
   const base = recipeMode ? window.GEZELLIG_CONFIG.RECIPE_IMAGE_BASE : window.GEZELLIG_CONFIG.IMAGE_BASE;
   return `${base}/${val}`;
 }
@@ -44,7 +44,7 @@ function resolveImage(ref, recipeMode=false){
   if (!ref) return '';
   const lib = imageRecordValue(ref);
   if (lib) return itemImageUrl(lib, recipeMode);
-  if (/^https?:/i.test(ref) || ref.startsWith('/') || ref.startsWith('data:')) return ref;
+  if (/^https?:/i.test(ref) || ref.startsWith('/') || ref.startsWith('data:') || ref.includes('/')) return ref;
   const base = recipeMode ? window.GEZELLIG_CONFIG.RECIPE_IMAGE_BASE : window.GEZELLIG_CONFIG.IMAGE_BASE;
   return `${base}/${ref}`;
 }
