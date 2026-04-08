@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>'t Gezellig Hoekje - Beheersysteem v2</title>
+  <title>'t Gezellig Hoekje - Beheersysteem v3 (Google API)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -170,6 +170,12 @@
       .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
       .grid-2, .grid-3, .menu-grid, .menu-sections, .form-grid, .menu-head { grid-template-columns: 1fr; }
     }
+  
+    .api-inline{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;}
+    .api-inline .statusline{font-size:12px;color:var(--muted);padding:0 6px;}
+    .api-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted);}
+    .api-badge strong{color:var(--accent);}
+
   </style>
 </head>
 <body>
@@ -182,6 +188,7 @@
       </div>
     </div>
     <nav class="nav" id="nav"></nav>
+      <div class="api-badge">Opslag: <strong id="storageBadge">Lokaal</strong></div>
   </header>
 
   <div class="layout">
@@ -331,7 +338,8 @@
       app.editingRecipeId = null;
       app.editingBoxId = null;
       saveState();
-      render();
+      populateApiForm();
+    render();
     }
 
     function getIngredient(id) { return app.state.ingredients.find(item => item.id === id); }
@@ -504,6 +512,24 @@
               <div class="hint">De import vervangt de huidige data volledig. Gebruik export eerst als back-up.</div>
             </div>
           </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Google Sheets API</h3></div>
+            <div class="panel-body stack">
+              <label for="apiUrl">Apps Script Web App URL</label>
+              <input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec">
+              <label for="apiToken">API token</label>
+              <input id="apiToken" type="password" placeholder="Script Property API_TOKEN">
+              <div class="row">
+                <button class="btn secondary" id="saveApiConfigBtn">API-config opslaan</button>
+                <button class="btn secondary" id="testApiBtn">Verbinding testen</button>
+              </div>
+              <div class="row">
+                <button class="btn" id="loadGoogleBtn">Laden van Google Sheet</button>
+                <button class="btn" id="saveGoogleBtn">Opslaan naar Google Sheet</button>
+              </div>
+              <div class="hint" id="apiStatusHint">De tool blijft lokaal werken. Met deze knoppen laad of bewaar je de volledige dataset via de Apps Script API.</div>
+            </div>
+          </div>
         `;
         document.getElementById('saveShopBtn').onclick = saveShop;
         document.getElementById('clearLogoBtn').onclick = () => { app.state.shop.logo = ''; saveState(); render(); };
@@ -511,6 +537,11 @@
         document.getElementById('importFile').onchange = importJsonFile;
         document.getElementById('importTextBtn').onclick = importJsonText;
         document.getElementById('resetBtn').onclick = resetState;
+        document.getElementById('saveApiConfigBtn').onclick = saveApiConfigFromForm;
+        document.getElementById('testApiBtn').onclick = testGoogleApi;
+        document.getElementById('loadGoogleBtn').onclick = loadFromGoogle;
+        document.getElementById('saveGoogleBtn').onclick = saveToGoogle;
+        populateApiForm();
         return;
       }
 
@@ -1283,6 +1314,123 @@
         alert(`Import mislukt: ${error.message}`);
       }
     }
+
+
+    const apiConfigKey = 'gezellig-hoekje-google-api-config';
+
+    function loadApiConfig() {
+      try {
+        return JSON.parse(localStorage.getItem(apiConfigKey) || '{"url":"","token":""}');
+      } catch (error) {
+        return { url:'', token:'' };
+      }
+    }
+
+    function populateApiForm() {
+      const cfg = loadApiConfig();
+      const urlEl = document.getElementById('apiUrl');
+      const tokenEl = document.getElementById('apiToken');
+      if (urlEl) urlEl.value = cfg.url || '';
+      if (tokenEl) tokenEl.value = cfg.token || '';
+      updateStorageBadge(cfg.url);
+    }
+
+    function updateStorageBadge(hasUrl) {
+      const badge = document.getElementById('storageBadge');
+      if (!badge) return;
+      badge.textContent = hasUrl ? 'Google Sheet + lokaal' : 'Lokaal';
+    }
+
+    function saveApiConfigFromForm() {
+      const cfg = {
+        url: document.getElementById('apiUrl')?.value.trim() || '',
+        token: document.getElementById('apiToken')?.value.trim() || ''
+      };
+      localStorage.setItem(apiConfigKey, JSON.stringify(cfg));
+      updateStorageBadge(cfg.url);
+      setApiStatus(cfg.url ? 'API-config opgeslagen.' : 'API-config gewist.');
+    }
+
+    function getApiConfig() {
+      return loadApiConfig();
+    }
+
+    function setApiStatus(message, isError = false) {
+      const el = document.getElementById('apiStatusHint');
+      if (!el) return;
+      el.textContent = message;
+      el.style.color = isError ? 'var(--bad)' : 'var(--muted)';
+    }
+
+    async function apiGet(action) {
+      const cfg = getApiConfig();
+      if (!cfg.url) throw new Error('Geen Apps Script URL ingevuld.');
+      const res = await fetch(`${cfg.url}?action=${encodeURIComponent(action)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function apiPost(action, data = {}) {
+      const cfg = getApiConfig();
+      if (!cfg.url) throw new Error('Geen Apps Script URL ingevuld.');
+      if (!cfg.token) throw new Error('Geen API token ingevuld.');
+      const res = await fetch(cfg.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: cfg.token,
+          action,
+          data
+        })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function testGoogleApi() {
+      try {
+        saveApiConfigFromForm();
+        const response = await apiGet('health');
+        if (!response.ok) throw new Error(response.error || 'Onbekende fout');
+        setApiStatus(`API ok — ${response.data.timestamp}`);
+        alert('Verbinding met de Apps Script API is gelukt.');
+      } catch (error) {
+        console.error(error);
+        setApiStatus(`Verbinding mislukt: ${error.message}`, true);
+        alert(`Verbinding mislukt: ${error.message}`);
+      }
+    }
+
+    async function loadFromGoogle() {
+      try {
+        saveApiConfigFromForm();
+        setApiStatus('Data wordt geladen...');
+        const response = await apiGet('data.all');
+        if (!response.ok) throw new Error(response.error || 'Onbekende fout');
+        applyImportedState(response.data || {});
+        setApiStatus('Data succesvol geladen uit Google Sheet.');
+      } catch (error) {
+        console.error(error);
+        setApiStatus(`Laden mislukt: ${error.message}`, true);
+        alert(`Laden mislukt: ${error.message}`);
+      }
+    }
+
+    async function saveToGoogle() {
+      try {
+        saveApiConfigFromForm();
+        setApiStatus('Data wordt opgeslagen...');
+        const response = await apiPost('import.all', app.state);
+        if (!response.ok) throw new Error(response.error || 'Onbekende fout');
+        setApiStatus('Data succesvol opgeslagen naar Google Sheet.');
+        alert('De huidige dataset is opgeslagen naar Google Sheets.');
+      } catch (error) {
+        console.error(error);
+        setApiStatus(`Opslaan mislukt: ${error.message}`, true);
+        alert(`Opslaan mislukt: ${error.message}`);
+      }
+    }
+
 
     function updateBrandLogo() {
       const wrap = document.getElementById('brandLogo');
