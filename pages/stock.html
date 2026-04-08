@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>'t Gezellig Hoekje - voorraad</title>
+  <title>'t Gezellig Hoekje - stock & winkellijst</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/scripts/common.css" />
 </head>
 <body data-page="stock">
-  <header class="topbar">
+  <header class="topbar compact-topbar">
     <div class="brandline">
       <div class="brandlogo" id="brandLogo">GH</div>
       <div class="titlewrap">
@@ -18,19 +18,32 @@
         <p id="brandSub">Koffiebar & gebak · live koppeling</p>
       </div>
     </div>
-    <nav class="nav" id="nav"></nav>
-    <div class="api-badge">Opslag: <strong id="storageBadge">Niet geladen</strong></div>
+
+    <nav class="nav nav-single-row" id="nav"></nav>
+
+    <div class="header-status-group">
+      <div class="api-badge">Opslag: <strong id="storageBadge">Niet geladen</strong></div>
+      <div class="live-badge live-warn" id="liveStatusBadge">
+        <span id="liveStatusText">Live status onbekend</span>
+      </div>
+    </div>
   </header>
+
+  <section class="page-title-bar">
+    <h2 id="pageTitle">Stock & Winkellijst</h2>
+  </section>
+
   <div class="layout">
     <aside class="sidebar">
       <div class="intro">
-        <h2 id="sidebarTitle">Laden...</h2>
-        <p id="sidebarIntro">Even geduld.</p>
+        <h2 id="sidebarTitle">Stock & Winkellijst</h2>
+        <p id="sidebarIntro">Bereken tekorten en aankoopkosten op basis van je planning.</p>
       </div>
       <div id="sidebarContent"></div>
     </aside>
     <main class="workspace" id="workspace"></main>
   </div>
+
   <script src="../assets/scripts/app.js"></script>
 </body>
 </html>
