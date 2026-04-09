@@ -33,6 +33,46 @@ const TYPE_OPTIONS = [
   { value: 'purchased_finished', label: 'Aangekocht' }
 ];
 
+
+
+const WRITE_TOKEN_KEY = 'gezellig_admin_token';
+
+function getWriteToken() {
+  try {
+    return window.localStorage.getItem(WRITE_TOKEN_KEY) || '';
+  } catch (err) {
+    return '';
+  }
+}
+
+function promptWriteToken(message = 'Voer de admin token in.') {
+  const current = getWriteToken();
+  const next = window.prompt(message, current);
+  if (next === null) return current;
+  const cleaned = String(next || '').trim();
+  if (!cleaned) return current;
+  try {
+    window.localStorage.setItem(WRITE_TOKEN_KEY, cleaned);
+  } catch (err) {
+    console.warn('Kon token niet bewaren in localStorage.', err);
+  }
+  return cleaned;
+}
+
+function clearWriteToken() {
+  try {
+    window.localStorage.removeItem(WRITE_TOKEN_KEY);
+  } catch (err) {
+    console.warn('Kon token niet wissen uit localStorage.', err);
+  }
+}
+
+function ensureWriteToken() {
+  const token = getWriteToken() || promptWriteToken('Voer de admin token in om wijzigingen op te slaan.');
+  if (!token) throw new Error('Geen admin token ingesteld. Stel eerst een token in op de pagina Shopinstellingen.');
+  return token;
+}
+
 const PRODUCT_TYPE_OPTIONS = [
   { value: 'drink', label: 'Drankje' },
   { value: 'snack', label: 'Hapje' },
@@ -1267,7 +1307,7 @@ function renderStock() {
       <div class="panel">
         <div class="panel-head">
           <h2>Winkellijst</h2>
-          <button class="btn secondary" style="width:auto;" id="copyStockBtn">Kopieer lijst</button>
+          <button class="btn secondary" style="width:auto;" id="copyStockBtn">Kopieer Markdown</button>
         </div>
         <div class="panel-body table-wrap">
           <table>
@@ -1805,14 +1845,19 @@ async function saveShopForm(e) {
 
 async function testApi() {
   const out = document.getElementById('apiResult');
+  const url = `${window.GEZELLIG_CONFIG.API_URL}?action=health`;
   try {
-    const data = await apiGet('health');
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Onbekende API-fout');
+    const data = json.data || {};
     out.className = 'okline';
     out.textContent = `Verbinding ok. Spreadsheet: ${data.spreadsheet || 'OK'}. Tijdstip: ${data.timestamp || ''}`;
     setLiveStatus('ok', 'Live gekoppeld');
   } catch (err) {
     out.className = 'badline';
-    out.textContent = `Verbinding mislukt: ${err.message}`;
+    out.textContent = `Verbinding mislukt: ${err.message}. Controleer of de Apps Script deployment opnieuw gepubliceerd is en of de API_URL naar de nieuwste deployment wijst.`;
     setLiveStatus('bad', 'Verbinding mislukt');
   }
 }
