@@ -14,12 +14,12 @@ const APP = {
 };
 
 const PAGE_META = {
-  dashboard: { title: 'Dashboard', intro: 'Overzicht van je shop, live geladen uit Google Sheets.' },
-  ingredients: { title: 'Ingrediënten', intro: 'Beheer grondstoffen, prijsgegevens en afbeeldingen rechtstreeks vanuit Google Sheets.' },
-  recipes: { title: 'Recepten', intro: 'Maak recepten, laat calorieën meerekenen en bepaal of ze zichtbaar zijn op de menukaart.' },
-  boxes: { title: 'Boxen', intro: 'Stel boxen samen op basis van bestaande recepten en laat de prijs automatisch berekenen.' },
-  stock: { title: 'Stock & Winkellijst', intro: 'Bereken tekorten en aankoopkosten op basis van je planning.' },
-  menu: { title: 'Menukaarten', intro: 'Pas stijlopties aan en toon alleen de recepten die actief én zichtbaar zijn op de menukaart.' },
+  dashboard: { title: 'Dashboard', intro: '' },
+  ingredients: { title: 'Ingrediënten', intro: 'Beheer grondstoffen, prijsgegevens en afbeeldingen.' },
+  recipes: { title: 'Recepten', intro: 'Maak recepten, bereken calorieën, kostprijs en winst, en bepaal of ze zichtbaar zijn op de menukaart.' },
+  boxes: { title: 'Boxen', intro: 'Stel boxen samen op basis van bestaande recepten en bereken automatisch verkoopprijs en winst.' },
+  stock: { title: 'Stock & Winkellijst', intro: 'Werk met een vaste dagplanning, bereken inkopen en bekijk de verwachte winst.' },
+  menu: { title: 'Menukaarten', intro: 'Stel je menukaart visueel samen en genereer een poster in 1920×1080.' },
   images: { title: 'Afbeeldingen', intro: 'Upload, beheer en verwijder afbeeldingen voor ingrediënten, recepten, boxen en de menukaart.' },
   settings: { title: 'Shopinstellingen', intro: 'Beheer shopinstellingen en test de API-verbinding.' }
 };
@@ -310,8 +310,9 @@ function fillHeader() {
   if (brandName) brandName.textContent = shop.name || "'t Gezellig Hoekje";
   if (brandSub) brandSub.textContent = `${shop.subtitle || 'Koffiebar & Gebak'} · live koppeling`;
   if (pageTitle) pageTitle.textContent = PAGE_META[APP.page]?.title || 'Dashboard';
-  if (sidebarTitle) sidebarTitle.textContent = PAGE_META[APP.page]?.title || 'Laden...';
-  if (sidebarIntro) sidebarIntro.textContent = PAGE_META[APP.page]?.intro || 'Even geduld.';
+
+  if (sidebarTitle) sidebarTitle.textContent = '';
+  if (sidebarIntro) sidebarIntro.textContent = PAGE_META[APP.page]?.intro || '';
 }
 
 function setSidebar(html) {
@@ -422,7 +423,12 @@ function renderDashboard() {
           <div class="panel-head"><h2>Stockwaarschuwingen</h2></div>
           <div class="panel-body stack">
             ${lowStock.length
-              ? lowStock.map(i => `<div class="warnline">${esc(i.name)} onder minimumstock (${i.stock}/${i.minStock})</div>`).join('')
+              ? lowStock.map(i => `
+                <div class="warnline warnline-flex">
+                  <span>${esc(i.name)} onder minimumstock (${i.stock}/${i.minStock})</span>
+                  ${Number(i.stock || 0) < 5 ? '<span class="urgent-badge">DRINGEND</span>' : ''}
+                </div>
+              `).join('')
               : `<div class="okline">Geen stockwaarschuwingen.</div>`
             }
           </div>
@@ -592,10 +598,8 @@ async function deleteIngredient(id) {
   renderIngredients();
 }
 
-function recipeIngredientOptions(productType, current = '') {
-  const isDrink = productType === 'drink';
+function recipeIngredientOptions(_productType, current = '') {
   return (APP.data.ingredients || [])
-    .filter(i => !isDrink || DRINK_ALLOWED.has(i.category) || i.type === 'condiment')
     .map(i => `<option value="${esc(i.id)}" ${current === i.id ? 'selected' : ''}>${esc(i.name)}</option>`)
     .join('');
 }
@@ -652,6 +656,7 @@ function updateRecipeComputed() {
   const calc = calculateRecipeCalories(temp);
   const target = targetCalories(temp.productType);
   const cost = calculateRecipeCost(temp);
+  const profit = Number(temp.sellPrice || 0) - cost;
 
   const out = document.getElementById('recipeComputed');
   if (out) {
@@ -663,6 +668,10 @@ function updateRecipeComputed() {
       <div class="item-card">
         <strong>Kostprijs</strong>
         <div class="small muted">${money(cost)}</div>
+      </div>
+      <div class="item-card">
+        <strong>Winst</strong>
+        <div class="small ${profit >= 0 ? 'status-ok' : 'status-bad'}">${money(profit)}</div>
       </div>
     `;
   }
@@ -682,7 +691,7 @@ function renderRecipes() {
             <div class="full"><label>Naam</label><input name="name" id="recipeNameInput" required></div>
             <div><label>Code</label><input name="id" id="recipeCodeInput" readonly placeholder="Wordt automatisch gegenereerd"></div>
             <div><label>Subtitel</label><input name="sub"></div>
-            <div><label>Categorie</label><input name="category" placeholder="bv. Koffie, Tosti's, Thee"></div>
+            <div><label>Categorie</label><input name="category"></div>
             <div><label>Type</label><select id="recipeType" name="productType">${productTypeOptions('drink')}</select></div>
             <div><label>Station</label><select name="station"><option value="drankje maken">Drankje maken</option><option value="eten maken">Eten maken</option></select></div>
             <div><label>Animatie</label><select name="animation">${animationOptions('coffee')}</select></div>
@@ -698,10 +707,9 @@ function renderRecipes() {
             <label>Ingrediënten</label>
             <div id="recipeLines" class="stack"></div>
             <div class="row" style="margin-top:8px;"><button class="btn secondary" type="button" id="addRecipeLineBtn">Ingrediëntregel toevoegen</button></div>
-            <div class="hint">Dranken tonen enkel drank-/fruit-/groente-/zuivel-/toppingingrediënten. Hapjes en hoofdgerechten tonen de volledige ingrediëntenlijst.</div>
           </div>
 
-          <div id="recipeComputed" class="grid-2"></div>
+          <div id="recipeComputed" class="grid-3"></div>
 
           <div class="row">
             <button class="btn" type="submit">Opslaan</button>
@@ -720,6 +728,7 @@ function renderRecipes() {
           const st = recipeStatus(r);
           const calc = calculateRecipeCalories(r);
           const target = targetCalories(r.productType || r.product_type);
+          const profit = recipeProfit(r);
           return `
             <div class="item-card">
               <div class="row wrap" style="justify-content:space-between; align-items:flex-start;">
@@ -739,9 +748,9 @@ function renderRecipes() {
                 <span>${esc(r.category || '')}</span>
                 <span>${esc(productTypeLabel(r.productType || r.product_type || ''))}</span>
                 <span>${asBool(r.visibleOnMenu ?? r.visible_on_menu) ? 'Op kaart' : 'Verborgen'}</span>
-                <span>${asBool(r.active) ? 'Actief' : 'Inactief'}</span>
                 <span>${money(r.sellPrice || r.sell_price)}</span>
                 <span>${money(calculateRecipeCost(r))}</span>
+                <span class="${profit >= 0 ? 'status-ok' : 'status-bad'}">Winst ${money(profit)}</span>
                 <span>${calc.toFixed(0)} / ${target} cal</span>
                 <span class="${st.cls}">${esc(st.label)}</span>
               </div>
@@ -773,13 +782,8 @@ function renderRecipes() {
 
   addRecipeLine({});
 
-  document.querySelectorAll('[data-recipe-edit]').forEach(btn => {
-    btn.onclick = () => fillRecipeForm(btn.dataset.recipeEdit);
-  });
-
-  document.querySelectorAll('[data-recipe-delete]').forEach(btn => {
-    btn.onclick = () => deleteRecipe(btn.dataset.recipeDelete);
-  });
+  document.querySelectorAll('[data-recipe-edit]').forEach(btn => btn.onclick = () => fillRecipeForm(btn.dataset.recipeEdit));
+  document.querySelectorAll('[data-recipe-delete]').forEach(btn => btn.onclick = () => deleteRecipe(btn.dataset.recipeDelete));
 }
 
 function boxLine(prefill = '') {
@@ -843,8 +847,8 @@ function renderBoxes() {
       <div class="panel-body stack">
         <form id="boxForm" class="stack">
           <div class="form-grid">
-            <div class="full"><label>Naam</label><input name="name" id="boxNameInput" required></div>
-            <div><label>Thema</label><input name="theme" placeholder="bv. EMS, LSPD, Lente"></div>
+            <div class="full"><label>Naam</label><input name="name" required></div>
+            <div><label>Thema</label><input name="theme"></div>
             <div><label>Korting %</label><input id="boxDiscount" type="number" min="0" max="100" step="1" name="discountPct" value="8"></div>
             <div class="full"><label>Promo tekst</label><input name="promo"></div>
             <div><label>Afbeelding</label>${imageSelect('boxImage', 'box')}</div>
@@ -853,16 +857,11 @@ function renderBoxes() {
           <div>
             <label>Items in box</label>
             <div id="boxLines" class="stack"></div>
-            <div class="row" style="margin-top:8px;">
-              <button class="btn secondary" type="button" id="addBoxLineBtn">Item toevoegen</button>
-            </div>
+            <div class="row" style="margin-top:8px;"><button class="btn secondary" type="button" id="addBoxLineBtn">Item toevoegen</button></div>
           </div>
 
           <div class="item-card">
-            <label class="row" style="gap:8px; width:auto;">
-              <input id="boxManualPrice" type="checkbox" name="manualPrice" style="width:auto;">
-              Handmatige boxprijs gebruiken
-            </label>
+            <label class="row" style="gap:8px; width:auto;"><input id="boxManualPrice" type="checkbox" name="manualPrice" style="width:auto;"> Handmatige boxprijs gebruiken</label>
             <label>Handmatige prijs</label>
             <input id="boxPrice" type="number" min="0" step="0.01" name="price" value="0">
             <div class="hint" id="boxPriceHint"></div>
@@ -882,7 +881,8 @@ function renderBoxes() {
       <div class="panel-head"><h2>Boxenoverzicht</h2><div class="pill">${rows.length} boxen</div></div>
       <div class="panel-body stack">
         ${rows.length ? rows.map(b => {
-          const sum = (b.items || []).reduce((s, id) => s + Number(recipeById(id)?.sellPrice || recipeById(id)?.sell_price || 0), 0);
+          const price = Number(b.price || computeBoxPrice(b) || 0);
+          const profit = boxProfit({ ...b, price });
           return `
             <div class="item-card">
               <div class="row wrap" style="justify-content:space-between; align-items:flex-start;">
@@ -900,10 +900,9 @@ function renderBoxes() {
               </div>
               <div class="item-meta">
                 <span>Items ${(b.items || []).length}</span>
-                <span>Som ${money(sum)}</span>
-                <span>Korting ${Number(b.discountPct || b.discount_value || 0)}%</span>
-                <span>${asBool(b.manualPrice || b.manual_price) ? 'Handmatige prijs' : 'Automatische prijs'}</span>
-                <span>${money(b.price || computeBoxPrice(b))}</span>
+                <span>Prijs ${money(price)}</span>
+                <span>Kost ${money(boxCost(b))}</span>
+                <span class="${profit >= 0 ? 'status-ok' : 'status-bad'}">Winst ${money(profit)}</span>
               </div>
               <div class="footer-note">${(b.items || []).map(id => esc(recipeById(id)?.name || id)).join(' · ')}</div>
             </div>
@@ -921,13 +920,8 @@ function renderBoxes() {
   addBoxLine('');
   bindBoxLineEvents();
 
-  document.querySelectorAll('[data-box-edit]').forEach(btn => {
-    btn.onclick = () => fillBoxForm(btn.dataset.boxEdit);
-  });
-
-  document.querySelectorAll('[data-box-delete]').forEach(btn => {
-    btn.onclick = () => deleteBox(btn.dataset.boxDelete);
-  });
+  document.querySelectorAll('[data-box-edit]').forEach(btn => btn.onclick = () => fillBoxForm(btn.dataset.boxEdit));
+  document.querySelectorAll('[data-box-delete]').forEach(btn => btn.onclick = () => deleteBox(btn.dataset.boxDelete));
 }
 
 function fillBoxForm(id) {
@@ -1035,13 +1029,117 @@ function renderPlanList() {
   });
 }
 
+function computePlanRows() {
+  const plan = APP.data.plan || [];
+  const needMap = new Map();
+  let expectedRevenue = 0;
+  let expectedProfit = 0;
+
+  plan.forEach(entry => {
+    const recipe = recipeById(entry.recipeId);
+    if (!recipe) return;
+
+    const qty = Number(entry.amount || 0);
+    expectedRevenue += Number(recipe.sellPrice || recipe.sell_price || 0) * qty;
+    expectedProfit += recipeProfit(recipe) * qty;
+
+    (recipe.ingredients || []).forEach(line => {
+      needMap.set(line.id, (needMap.get(line.id) || 0) + Number(line.amount || 0) * qty);
+    });
+  });
+
+  const rows = [...needMap.entries()].map(([id, need]) => {
+    const ing = ingredientById(id) || { name: id, supplier: 'onbekend', stock: 0, price: 0 };
+    const stock = Number(ing.stock || 0);
+    const buy = Math.max(0, need - stock);
+
+    return {
+      id,
+      name: ing.name,
+      supplier: ing.supplier,
+      need,
+      stock,
+      buy,
+      subtotal: buy * Number(ing.price || 0)
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'nl'));
+
+  return {
+    rows,
+    expectedRevenue,
+    expectedProfit,
+    totalBuy: rows.reduce((s, r) => s + r.subtotal, 0)
+  };
+}
+
+function renderPlanningList() {
+  const plan = APP.data.plan || [];
+  const el = document.getElementById('planningList');
+  if (!el) return;
+
+  el.innerHTML = !plan.length
+    ? '<div class="item-card muted small">Nog geen gerechten toegevoegd aan de dagplanning.</div>'
+    : plan.map((row, idx) => {
+        const recipe = recipeById(row.recipeId);
+        const price = Number(recipe?.sellPrice || recipe?.sell_price || 0);
+        const profit = recipe ? recipeProfit(recipe) * Number(row.amount || 0) : 0;
+
+        return `
+          <div class="item-card">
+            <div class="row wrap" style="justify-content:space-between;">
+              <div>
+                <strong>${esc(recipe?.name || row.recipeId)}</strong>
+                <div class="muted small">Prijs/stuk ${money(price)}</div>
+              </div>
+              <button class="btn danger" style="width:auto;" data-plan-remove="${idx}">Verwijder</button>
+            </div>
+            <label>Aantal</label>
+            <input type="number" min="1" step="1" value="${Number(row.amount || 1)}" data-plan-qty="${idx}">
+            <div class="muted small">Verwachte winst: ${money(profit)}</div>
+          </div>
+        `;
+      }).join('');
+
+  el.querySelectorAll('[data-plan-remove]').forEach(btn => btn.onclick = () => removePlanIndex(Number(btn.dataset.planRemove)));
+  el.querySelectorAll('[data-plan-qty]').forEach(inp => inp.onchange = () => updatePlanQty(Number(inp.dataset.planQty), Number(inp.value || 1)));
+}
+
+function buildClipboardText(summary) {
+  const supplierMap = {};
+  summary.rows.forEach(r => {
+    (supplierMap[r.supplier] ||= []).push(`${r.name}: ${r.buy}`);
+  });
+
+  return [
+    'Winkellijst',
+    ...summary.rows.filter(r => r.buy > 0).map(r => `- ${r.name}: ${r.buy} (${r.supplier}) - ${money(r.subtotal)}`),
+    '',
+    'Aankoop per locatie',
+    ...Object.entries(supplierMap).map(([k, v]) => `${k}: ${v.join(', ')}`),
+    '',
+    `Totale aankoopkost: ${money(summary.totalBuy)}`,
+    `Te verwachten omzet: ${money(summary.expectedRevenue)}`,
+    `Te verwachten winst: ${money(summary.expectedProfit)}`
+  ].join('\\n');
+}
+
+async function copyStockSummary() {
+  const summary = computePlanRows();
+  await navigator.clipboard.writeText(buildClipboardText(summary));
+  const btn = document.getElementById('copyStockBtn');
+  if (btn) {
+    const old = btn.textContent;
+    btn.textContent = 'Gekopieerd';
+    setTimeout(() => btn.textContent = old, 1500);
+  }
+}
+
 function renderStock() {
-  const rows = computePlanRows();
-  const total = rows.reduce((s, r) => s + r.subtotal, 0);
+  const summary = computePlanRows();
 
   setSidebar(`
     <div class="panel">
-      <div class="panel-head"><h3>Planning</h3></div>
+      <div class="panel-head"><h3>Dagplanning</h3></div>
       <div class="panel-body stack">
         <div>
           <label>Recept</label>
@@ -1057,15 +1155,23 @@ function renderStock() {
           <button class="btn" id="addPlanBtn">Toevoegen</button>
           <button class="btn secondary" id="clearPlanBtn">Leegmaken</button>
         </div>
-        <div id="planList"></div>
+        <div class="hint">Werk hier je vaste dagplanning bij. De winkellijst houdt automatisch rekening met de huidige stock.</div>
       </div>
     </div>
   `);
 
   setWorkspace(`
-    <div class="grid-2">
+    <div class="stock-three-cols">
       <div class="panel">
-        <div class="panel-head"><h2>Winkellijst</h2></div>
+        <div class="panel-head"><h2>Planning in opbouw</h2></div>
+        <div class="panel-body stack" id="planningList"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Winkellijst</h2>
+          <button class="btn secondary" style="width:auto;" id="copyStockBtn">Kopieer lijst</button>
+        </div>
         <div class="panel-body table-wrap">
           <table>
             <thead>
@@ -1079,8 +1185,8 @@ function renderStock() {
               </tr>
             </thead>
             <tbody>
-              ${rows.length
-                ? rows.map(r => `
+              ${summary.rows.length
+                ? summary.rows.map(r => `
                   <tr>
                     <td>${esc(r.name)}</td>
                     <td>${esc(r.supplier)}</td>
@@ -1102,15 +1208,19 @@ function renderStock() {
         <div class="panel-body stack small">
           <div class="item-card">
             <h4>Totale aankoopkost</h4>
-            <div class="status-warn">${money(total)}</div>
+            <div class="status-warn">${money(summary.totalBuy)}</div>
           </div>
           <div class="item-card">
-            <h4>Supermarkt</h4>
-            <div class="muted">${money(rows.filter(r => r.supplier === 'supermarkt').reduce((s, r) => s + r.subtotal, 0))}</div>
+            <h4>Aankooplocaties</h4>
+            <div class="muted">${[...new Set(summary.rows.filter(r => r.buy > 0).map(r => r.supplier))].join(', ') || 'Geen aankopen nodig'}</div>
           </div>
           <div class="item-card">
-            <h4>Groothandel</h4>
-            <div class="muted">${money(rows.filter(r => r.supplier === 'groothandel').reduce((s, r) => s + r.subtotal, 0))}</div>
+            <h4>Te verwachten omzet</h4>
+            <div class="muted">${money(summary.expectedRevenue)}</div>
+          </div>
+          <div class="item-card">
+            <h4>Te verwachten winst</h4>
+            <div class="status-ok">${money(summary.expectedProfit)}</div>
           </div>
         </div>
       </div>
@@ -1119,7 +1229,46 @@ function renderStock() {
 
   document.getElementById('addPlanBtn').onclick = savePlan;
   document.getElementById('clearPlanBtn').onclick = clearPlan;
-  renderPlanList();
+  document.getElementById('copyStockBtn').onclick = copyStockSummary;
+  renderPlanningList();
+}
+
+async function savePlan() {
+  const plan = [...(APP.data.plan || [])];
+  const recipeId = document.getElementById('stockRecipe').value;
+  const amount = Number(document.getElementById('stockAmount').value || 1);
+
+  const existing = plan.find(p => p.recipeId === recipeId);
+  if (existing) existing.amount += amount;
+  else plan.push({ recipeId, amount });
+
+  await apiPost('plan.save', plan);
+  await loadAllData();
+  renderStock();
+}
+
+async function clearPlan() {
+  if (!confirm('Dagplanning leegmaken?')) return;
+  await apiPost('plan.save', []);
+  await loadAllData();
+  renderStock();
+}
+
+async function removePlanIndex(idx) {
+  const plan = [...(APP.data.plan || [])];
+  plan.splice(idx, 1);
+  await apiPost('plan.save', plan);
+  await loadAllData();
+  renderStock();
+}
+
+async function updatePlanQty(idx, amount) {
+  const plan = [...(APP.data.plan || [])];
+  if (!plan[idx]) return;
+  plan[idx].amount = Math.max(1, Number(amount || 1));
+  await apiPost('plan.save', plan);
+  await loadAllData();
+  renderStock();
 }
 
 async function savePlan() {
@@ -1549,3 +1698,47 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+function recipeProfit(recipe) {
+  return Number(recipe.sellPrice || recipe.sell_price || 0) - calculateRecipeCost(recipe);
+}
+
+function boxCost(box) {
+  return (box.items || []).reduce((s, id) => s + calculateRecipeCost(recipeById(id) || { ingredients: [] }), 0);
+}
+
+function boxProfit(box) {
+  return Number(box.price || computeBoxPrice(box) || 0) - boxCost(box);
+}
+
+async function saveRecipeForm(e) {
+  e.preventDefault();
+  const form = e.currentTarget;
+
+  const ingredients = [...document.querySelectorAll('#recipeLines .recipe-line')]
+    .map(row => ({
+      id: row.querySelector('.recipeIngSelect').value,
+      amount: Number(row.querySelector('.recipeIngAmount').value || 0)
+    }))
+    .filter(l => l.id && l.amount > 0);
+
+  const data = {
+    id: form.dataset.editingId || generateUniqueRecipeId(form.elements.name.value.trim()),
+    name: form.elements.name.value.trim(),
+    sub: form.elements.sub.value.trim(),
+    category: form.elements.category.value.trim(),
+    productType: form.elements.productType.value,
+    station: form.elements.station.value,
+    animation: form.elements.animation.value,
+    sellPrice: Number(form.elements.sellPrice.value || 0),
+    calories: Number(calculateRecipeCalories({ ingredients }).toFixed(0)),
+    visibleOnMenu: form.elements.visibleOnMenu.checked,
+    active: form.elements.active.checked,
+    image: document.getElementById('recipeImage').value,
+    ingredients
+  };
+
+  await apiPost('recipes.save', data);
+  await loadAllData();
+  renderRecipes();
+}
