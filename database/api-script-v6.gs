@@ -2,10 +2,12 @@
  * 't Gezellig Hoekje — Google Sheets API v4
  * Vast in script instelbaar:
  * - FIXED_SPREADSHEET_ID
- * - FIXED_API_TOKEN
+ * - FIXED_SPREADSHEET_ID
+ *
+ * Write-token staat niet meer hardcoded in de frontend.
+ * Stel in Script Properties een sleutel API_TOKEN in.
  */
 const FIXED_SPREADSHEET_ID = '1XOUu-frFePM2I7MVX_3e3uGYGg_X1fq0J9Sc3pT7-p4';
-const FIXED_API_TOKEN = 'COFFEE_HOOK_0804';
 
 const SHEETS = {
   ingredients: ['id','name','type','category','supplier','unit','price','stock','min_stock','active','image','calories_per_processed_piece','processed_yield','price_per_processed_piece','weight_per_piece_g','price_per_calorie','notes'],
@@ -31,6 +33,8 @@ function doGet(e) {
         return jsonResponse({ ok: true, data: listRows_('images').map(mapImageRow_) });
       case 'ingredients.list':
         return jsonResponse({ ok: true, data: listRows_('ingredients').map(mapIngredientRow_) });
+      case 'processed_products.list':
+        return jsonResponse({ ok: true, data: listRows_('processed_products').map(mapProcessedProductRow_) });
       case 'recipes.list':
         return jsonResponse({ ok: true, data: listRecipesExpanded_() });
       case 'boxes.list':
@@ -97,7 +101,7 @@ function getConfigValue_(key, fixedValue) {
   return PropertiesService.getScriptProperties().getProperty(key);
 }
 function requireToken_(token) {
-  const expected = getConfigValue_('API_TOKEN', FIXED_API_TOKEN);
+  const expected = PropertiesService.getScriptProperties().getProperty('API_TOKEN');
   if (!expected) throw new Error('Missing API token');
   if (String(token || '') !== String(expected)) throw new Error('Unauthorized');
 }
@@ -118,9 +122,13 @@ function ensureSheets_() {
     if (!sh) sh = ss.insertSheet(name);
     const headers = SHEETS[name];
     const currentHeaders = sh.getLastColumn() ? sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0] : [];
-    if (JSON.stringify(headers) !== JSON.stringify(currentHeaders)) {
+    const normalizedCurrent = currentHeaders.slice(0, headers.length);
+    const needsReset = JSON.stringify(headers) !== JSON.stringify(normalizedCurrent);
+    if (needsReset) {
       sh.clearContents();
       sh.getRange(1,1,1,headers.length).setValues([headers]);
+      sh.setFrozenRows(1);
+    } else if (sh.getFrozenRows() !== 1) {
       sh.setFrozenRows(1);
     }
   });
@@ -225,6 +233,22 @@ function saveIngredient_(item) {
   };
   saveRowById_('ingredients', row);
   return mapIngredientRow_(row);
+}
+
+function mapProcessedProductRow_(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    processType: row.process_type || '',
+    sourceItem1: row.source_item_1 || '',
+    sourceAmount1: Number(row.source_amount_1 || 0),
+    sourceItem2: row.source_item_2 || '',
+    sourceAmount2: Number(row.source_amount_2 || 0),
+    yield: Number(row.yield || 0),
+    unit: row.unit || '',
+    active: normalizeBool_(row.active),
+    notes: row.notes || ''
+  };
 }
 
 function listRecipesExpanded_() {
@@ -361,6 +385,7 @@ function exportAllAsState_() {
     },
     menuSettings: settingsRows,
     ingredients: listRows_('ingredients').map(mapIngredientRow_),
+    processedProducts: listRows_('processed_products').map(mapProcessedProductRow_),
     recipes: listRecipesExpanded_(),
     boxes: listBoxesExpanded_(),
     images: listRows_('images').map(mapImageRow_),

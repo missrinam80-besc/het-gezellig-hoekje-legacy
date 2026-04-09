@@ -8,6 +8,7 @@ const APP = {
   page: document.body.dataset.page || 'dashboard',
   data: null,
   ingredientsMap: new Map(),
+  processedMap: new Map(),
   recipesMap: new Map(),
   imagesMap: new Map()
 };
@@ -179,6 +180,7 @@ async function apiPost(action, data = {}) {
 async function loadAllData() {
   APP.data = await apiGet('data.all');
   APP.ingredientsMap = new Map((APP.data.ingredients || []).map(i => [i.id, i]));
+  APP.processedMap = new Map((APP.data.processedProducts || []).map(i => [i.id, i]));
   APP.recipesMap = new Map((APP.data.recipes || []).map(r => [r.id, r]));
   APP.imagesMap = new Map((APP.data.images || []).map(i => [i.id, i]));
   fillHeader();
@@ -188,6 +190,89 @@ async function loadAllData() {
 
 function ingredientById(id) {
   return APP.ingredientsMap.get(id);
+}
+
+function processedProductById(id) {
+  return APP.processedMap.get(id);
+}
+
+function catalogItemById(id) {
+  return ingredientById(id) || processedProductById(id) || null;
+}
+
+function itemDisplayName(id) {
+  return catalogItemById(id)?.name || id;
+}
+
+function isProcessedId(id) {
+  return APP.processedMap.has(id);
+}
+
+function safeNumber(v) {
+  const n = Number(v || 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function unitMetrics(itemId, stack = new Set()) {
+  const raw = ingredientById(itemId);
+  if (raw) {
+    return {
+      cost: priceForLine(raw, 1),
+      calories: caloriesForLine(raw, 1),
+      rawNeeds: new Map([[itemId, 1]]),
+      missing: []
+    };
+  }
+
+  const processed = processedProductById(itemId);
+  if (!processed) {
+    return { cost: 0, calories: 0, rawNeeds: new Map(), missing: [`Ontbrekend item: ${itemId}`] };
+  }
+
+  if (stack.has(itemId)) {
+    return { cost: 0, calories: 0, rawNeeds: new Map(), missing: [`Circulaire verwerking: ${itemId}`] };
+  }
+
+  const nextStack = new Set(stack);
+  nextStack.add(itemId);
+
+  const yieldAmount = Math.max(1, safeNumber(processed.yield));
+  const sources = [
+    { id: processed.sourceItem1 || processed.source_item_1, amount: processed.sourceAmount1 || processed.source_amount_1 },
+    { id: processed.sourceItem2 || processed.source_item_2, amount: processed.sourceAmount2 || processed.source_amount_2 }
+  ].filter(s => s.id && safeNumber(s.amount) > 0);
+
+  if (!sources.length) {
+    return { cost: 0, calories: 0, rawNeeds: new Map(), missing: [`Geen bron ingesteld voor ${processed.name || itemId}`] };
+  }
+
+  let cost = 0;
+  let calories = 0;
+  const rawNeeds = new Map();
+  const missing = [];
+
+  for (const source of sources) {
+    const sourceMetrics = unitMetrics(source.id, nextStack);
+    const multiplier = safeNumber(source.amount) / yieldAmount;
+    cost += sourceMetrics.cost * multiplier;
+    calories += sourceMetrics.calories * multiplier;
+    sourceMetrics.rawNeeds.forEach((value, key) => rawNeeds.set(key, (rawNeeds.get(key) || 0) + value * multiplier));
+    missing.push(...sourceMetrics.missing);
+  }
+
+  return { cost, calories, rawNeeds, missing };
+}
+
+function recipeRawNeeds(recipe, qty = 1) {
+  const needs = new Map();
+  const missing = [];
+  (recipe.ingredients || []).forEach(line => {
+    const metrics = unitMetrics(line.id);
+    const multiplier = safeNumber(line.amount) * safeNumber(qty);
+    metrics.rawNeeds.forEach((value, key) => needs.set(key, (needs.get(key) || 0) + value * multiplier));
+    missing.push(...metrics.missing);
+  });
+  return { needs, missing };
 }
 
 function recipeById(id) {
@@ -226,11 +311,11 @@ function caloriesForLine(ingredient, amount) {
 }
 
 function calculateRecipeCost(recipe) {
-  return (recipe.ingredients || []).reduce((s, l) => s + priceForLine(ingredientById(l.id), l.amount), 0);
+  return (recipe.ingredients || []).reduce((sum, line) => sum + unitMetrics(line.id).cost * safeNumber(line.amount), 0);
 }
 
 function calculateRecipeCalories(recipe) {
-  return (recipe.ingredients || []).reduce((s, l) => s + caloriesForLine(ingredientById(l.id), l.amount), 0);
+  return (recipe.ingredients || []).reduce((sum, line) => sum + unitMetrics(line.id).calories * safeNumber(line.amount), 0);
 }
 
 function targetCalories(productType) {
@@ -247,11 +332,15 @@ function foodCostPct(recipe) {
 function recipeStatus(recipe) {
   const missing = [];
   for (const line of (recipe.ingredients || [])) {
-    const ing = ingredientById(line.id);
-    if (!ing) missing.push(`Ontbrekend ingrediënt: ${line.id}`);
-    else if (ing.active === false) missing.push(`${ing.name} staat inactief`);
+    const item = catalogItemById(line.id);
+    if (!item) {
+      missing.push(`Ontbrekend item: ${line.id}`);
+      continue;
+    }
+    if (item.active === false) missing.push(`${item.name} staat inactief`);
+    missing.push(...unitMetrics(line.id).missing);
   }
-  if (missing.length) return { label: 'Niet haalbaar', cls: 'status-bad', lines: missing };
+  if (missing.length) return { label: 'Niet haalbaar', cls: 'status-bad', lines: [...new Set(missing)] };
   const pct = foodCostPct(recipe);
   if (!pct) return { label: 'Controle nodig', cls: 'status-warn', lines: ['Geen kostprijs beschikbaar'] };
   return pct > 65
@@ -597,9 +686,18 @@ async function deleteIngredient(id) {
 }
 
 function recipeIngredientOptions(_productType, current = '') {
-  return (APP.data.ingredients || [])
-    .map(i => `<option value="${esc(i.id)}" ${current === i.id ? 'selected' : ''}>${esc(i.name)}</option>`)
-    .join('');
+  const ingredientOptions = (APP.data.ingredients || [])
+    .filter(i => i.active !== false)
+    .map(i => `<option value="${esc(i.id)}" ${current === i.id ? 'selected' : ''}>${esc(i.name)}</option>`);
+
+  const processedOptions = (APP.data.processedProducts || [])
+    .filter(i => i.active !== false)
+    .map(i => `<option value="${esc(i.id)}" ${current === i.id ? 'selected' : ''}>${esc(i.name)} · verwerkt</option>`);
+
+  return [
+    ingredientOptions.length ? `<optgroup label="Grondstoffen">${ingredientOptions.join('')}</optgroup>` : '',
+    processedOptions.length ? `<optgroup label="Verwerkte producten">${processedOptions.join('')}</optgroup>` : ''
+  ].join('');
 }
 
 function recipeLine(prefill = {}, productType = 'drink') {
@@ -752,7 +850,7 @@ function renderRecipes() {
                 <span>${calc.toFixed(0)} / ${target} cal</span>
                 <span class="${st.cls}">${esc(st.label)}</span>
               </div>
-              <div class="footer-note">Ingrediënten: ${(r.ingredients || []).map(l => `${esc(ingredientById(l.id)?.name || l.id)} × ${l.amount}`).join(', ')}</div>
+              <div class="footer-note">Ingrediënten: ${(r.ingredients || []).map(l => `${esc(itemDisplayName(l.id))} × ${l.amount}`).join(', ')}</div>
             </div>
           `;
         }).join('') : `<div class="item-card muted">Nog geen recepten gevonden.</div>`}
@@ -782,6 +880,31 @@ function renderRecipes() {
 
   document.querySelectorAll('[data-recipe-edit]').forEach(btn => btn.onclick = () => fillRecipeForm(btn.dataset.recipeEdit));
   document.querySelectorAll('[data-recipe-delete]').forEach(btn => btn.onclick = () => deleteRecipe(btn.dataset.recipeDelete));
+}
+
+function fillRecipeForm(id) {
+  const recipe = recipeById(id);
+  if (!recipe) return;
+
+  const form = document.getElementById('recipeForm');
+  form.elements.name.value = recipe.name || '';
+  form.elements.id.value = recipe.id || '';
+  form.elements.sub.value = recipe.sub || recipe.subtitle || '';
+  form.elements.category.value = recipe.category || '';
+  form.elements.productType.value = recipe.productType || recipe.product_type || 'drink';
+  form.elements.station.value = recipe.station || 'drankje maken';
+  form.elements.animation.value = recipe.animation || 'coffee';
+  form.elements.sellPrice.value = safeNumber(recipe.sellPrice || recipe.sell_price);
+  form.elements.visibleOnMenu.checked = asBool(recipe.visibleOnMenu ?? recipe.visible_on_menu);
+  form.elements.active.checked = asBool(recipe.active);
+  document.getElementById('recipeImage').value = recipe.image || '';
+  form.dataset.editingId = recipe.id;
+
+  const lines = document.getElementById('recipeLines');
+  if (lines) lines.innerHTML = '';
+  (recipe.ingredients || []).forEach(line => addRecipeLine(line));
+  updateRecipeSelectOptions();
+  updateRecipeComputed();
 }
 
 function boxLine(prefill = '') {
@@ -977,33 +1100,6 @@ async function deleteBox(id) {
   renderBoxes();
 }
 
-function computePlanRows() {
-  const plan = APP.data.plan || [];
-  const needMap = new Map();
-
-  plan.forEach(entry => {
-    const recipe = recipeById(entry.recipeId);
-    if (!recipe) return;
-    (recipe.ingredients || []).forEach(line => {
-      needMap.set(line.id, (needMap.get(line.id) || 0) + Number(line.amount || 0) * Number(entry.amount || 0));
-    });
-  });
-
-  return [...needMap.entries()].map(([id, need]) => {
-    const ing = ingredientById(id) || { name: id, supplier: 'onbekend', stock: 0, price: 0 };
-    const stock = Number(ing.stock || 0);
-    const buy = Math.max(0, need - stock);
-    return {
-      id,
-      name: ing.name,
-      supplier: ing.supplier,
-      need,
-      stock,
-      buy,
-      subtotal: buy * Number(ing.price || 0)
-    };
-  }).sort((a, b) => a.name.localeCompare(b.name, 'nl'));
-}
 
 function renderPlanList() {
   const wrap = document.getElementById('planList');
@@ -1032,33 +1128,35 @@ function computePlanRows() {
   const needMap = new Map();
   let expectedRevenue = 0;
   let expectedProfit = 0;
+  const missing = [];
 
   plan.forEach(entry => {
     const recipe = recipeById(entry.recipeId);
     if (!recipe) return;
 
-    const qty = Number(entry.amount || 0);
-    expectedRevenue += Number(recipe.sellPrice || recipe.sell_price || 0) * qty;
+    const qty = safeNumber(entry.amount);
+    expectedRevenue += safeNumber(recipe.sellPrice || recipe.sell_price) * qty;
     expectedProfit += recipeProfit(recipe) * qty;
 
-    (recipe.ingredients || []).forEach(line => {
-      needMap.set(line.id, (needMap.get(line.id) || 0) + Number(line.amount || 0) * qty);
-    });
+    const exploded = recipeRawNeeds(recipe, qty);
+    exploded.needs.forEach((value, key) => needMap.set(key, (needMap.get(key) || 0) + value));
+    missing.push(...exploded.missing);
   });
 
   const rows = [...needMap.entries()].map(([id, need]) => {
-    const ing = ingredientById(id) || { name: id, supplier: 'onbekend', stock: 0, price: 0 };
-    const stock = Number(ing.stock || 0);
+    const ing = ingredientById(id) || { name: id, supplier: 'onbekend', stock: 0 };
+    const stock = safeNumber(ing.stock);
     const buy = Math.max(0, need - stock);
+    const unitCost = unitMetrics(id).cost;
 
     return {
       id,
       name: ing.name,
-      supplier: ing.supplier,
+      supplier: ing.supplier || 'onbekend',
       need,
       stock,
       buy,
-      subtotal: buy * Number(ing.price || 0)
+      subtotal: buy * unitCost
     };
   }).sort((a, b) => a.name.localeCompare(b.name, 'nl'));
 
@@ -1066,7 +1164,8 @@ function computePlanRows() {
     rows,
     expectedRevenue,
     expectedProfit,
-    totalBuy: rows.reduce((s, r) => s + r.subtotal, 0)
+    totalBuy: rows.reduce((s, r) => s + r.subtotal, 0),
+    missing: [...new Set(missing)]
   };
 }
 
@@ -1219,6 +1318,10 @@ function renderStock() {
           <div class="item-card">
             <h4>Te verwachten winst</h4>
             <div class="status-ok">${money(summary.expectedProfit)}</div>
+          </div>
+          <div class="item-card">
+            <h4>Verwerking</h4>
+            <div class="muted">${summary.missing?.length ? esc(summary.missing.join(' · ')) : 'Verwerkte producten zijn meegerekend in kost en stock.'}</div>
           </div>
         </div>
       </div>
