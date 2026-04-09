@@ -1,6 +1,5 @@
 window.GEZELLIG_CONFIG = Object.assign({
   API_URL: 'https://script.google.com/macros/s/AKfycbwhrWNby9HVYPx-e01-eBPAOsRZbQfJtIgtcyHpPEP-q5Vo8eG28N4GB4OQSMwI6Ygq7A/exec',
-  API_TOKEN: 'COFFEE_HOOK_0804',
   IMAGE_BASE: 'assets/images/raw',
   RECIPE_IMAGE_BASE: 'assets/images/recepies'
 }, window.GEZELLIG_CONFIG || {});
@@ -163,9 +162,8 @@ async function apiGet(action) {
 
 async function apiPost(action, data = {}) {
   const url = window.GEZELLIG_CONFIG.API_URL;
-  const token = window.GEZELLIG_CONFIG.API_TOKEN;
+  const token = ensureWriteToken();
   if (!url || url.includes('PASTE_HIER')) throw new Error('API_URL is nog niet ingevuld in assets/app.js');
-  if (!token || token.includes('PASTE_HIER')) throw new Error('API_TOKEN is nog niet ingevuld in assets/app.js');
 
   const payload = { token, action, data };
   const body = new URLSearchParams({ payload: JSON.stringify(payload) });
@@ -311,7 +309,7 @@ function fillHeader() {
   if (brandSub) brandSub.textContent = `${shop.subtitle || 'Koffiebar & Gebak'} · live koppeling`;
   if (pageTitle) pageTitle.textContent = PAGE_META[APP.page]?.title || 'Dashboard';
 
-  if (sidebarTitle) sidebarTitle.textContent = '';
+  if (sidebarTitle) sidebarTitle.textContent = PAGE_META[APP.page]?.title || '';
   if (sidebarIntro) sidebarIntro.textContent = PAGE_META[APP.page]?.intro || '';
 }
 
@@ -1271,32 +1269,6 @@ async function updatePlanQty(idx, amount) {
   renderStock();
 }
 
-async function savePlan() {
-  const plan = [...(APP.data.plan || [])];
-  plan.push({
-    recipeId: document.getElementById('stockRecipe').value,
-    amount: Number(document.getElementById('stockAmount').value || 1)
-  });
-  await apiPost('plan.save', plan);
-  await loadAllData();
-  renderStock();
-}
-
-async function clearPlan() {
-  if (!confirm('Planning leegmaken?')) return;
-  await apiPost('plan.save', []);
-  await loadAllData();
-  renderStock();
-}
-
-async function removePlanIndex(idx) {
-  const plan = [...(APP.data.plan || [])];
-  plan.splice(idx, 1);
-  await apiPost('plan.save', plan);
-  await loadAllData();
-  renderStock();
-}
-
 function applyMenuStyles() {
   const s = settingsMap();
   document.documentElement.style.setProperty('--menu-canvas-bg', s.canvas_bg_color || '#1b1715');
@@ -1357,7 +1329,15 @@ function renderMenu() {
   const menuLogo = resolveImage(s.menu_logo_image || shop.logo || '', false);
 
   setWorkspace(`
-    <div class="menu-board ${bg ? 'has-bg' : ''}" style="${bg ? `--menu-bg-image:url('${bg}')` : ''}">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Preview</h2>
+        <div class="row">
+          <button class="btn secondary" type="button" id="menuDownloadBtn">Download PNG</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div id="menuPoster" class="menu-board ${bg ? 'has-bg' : ''}" style="${bg ? `--menu-bg-image:url('${bg}')` : ''}">
       <div class="menu-head">
         <div class="menu-logo">${menuLogo ? `<img src="${esc(menuLogo)}" alt="Logo">` : 'GH'}</div>
         <div>
@@ -1412,6 +1392,7 @@ function renderMenu() {
             `).join('')}
           </div>
         </div>
+        </div>
       </div>
     </div>
   `);
@@ -1421,6 +1402,51 @@ function renderMenu() {
     await loadAllData();
     renderMenu();
   };
+  const menuDownloadBtn = document.getElementById('menuDownloadBtn');
+  if (menuDownloadBtn) menuDownloadBtn.onclick = downloadMenuPng;
+}
+
+async function downloadMenuPng() {
+  if (typeof html2canvas !== 'function') throw new Error('html2canvas is niet geladen.');
+  const poster = document.getElementById('menuPoster');
+  if (!poster) throw new Error('Geen poster gevonden om te exporteren.');
+
+  const button = document.getElementById('menuDownloadBtn');
+  const previous = button ? button.textContent : '';
+
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'PNG wordt gemaakt…';
+    }
+
+    const canvas = await html2canvas(poster, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true,
+      width: 1920,
+      height: 1080,
+      windowWidth: 1920,
+      windowHeight: 1080
+    });
+
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = 1920;
+    exportCanvas.height = 1080;
+    const ctx = exportCanvas.getContext('2d');
+    ctx.drawImage(canvas, 0, 0, 1920, 1080);
+
+    const link = document.createElement('a');
+    const safeName = slugify(shopData().name || 'menu');
+    link.href = exportCanvas.toDataURL('image/png');
+    link.download = `${safeName}_menukaart.png`;
+    link.click();
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = previous || 'Download PNG';
+    }
+  }
 }
 
 async function saveMenuStyleForm(e) {
@@ -1614,6 +1640,18 @@ function renderSettings() {
         <div id="apiResult" class="hint">Klik op de knop om de verbinding te testen.</div>
       </div>
     </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Admin token</h3></div>
+      <div class="panel-body stack">
+        <div class="hint">Lezen werkt zonder token. Voor opslaan of verwijderen is een admin token nodig.</div>
+        <div class="row">
+          <button class="btn secondary" id="setTokenBtn" type="button">Token instellen of wijzigen</button>
+          <button class="btn ghost" id="clearTokenBtn" type="button">Token wissen</button>
+        </div>
+        <div id="tokenState" class="hint"></div>
+      </div>
+    </div>
   `);
 
   setWorkspace(`
@@ -1630,6 +1668,17 @@ function renderSettings() {
 
   document.getElementById('shopForm').onsubmit = saveShopForm;
   document.getElementById('testApiBtn').onclick = testApi;
+  const setTokenBtn = document.getElementById('setTokenBtn');
+  const clearTokenBtn = document.getElementById('clearTokenBtn');
+  if (setTokenBtn) setTokenBtn.onclick = () => { promptWriteToken('Voer de admin token in.'); updateTokenState(); };
+  if (clearTokenBtn) clearTokenBtn.onclick = () => { clearWriteToken(); updateTokenState(); };
+  updateTokenState();
+}
+
+function updateTokenState() {
+  const out = document.getElementById('tokenState');
+  if (!out) return;
+  out.textContent = getWriteToken() ? 'Admin token is ingesteld op dit toestel.' : 'Er is momenteel geen admin token ingesteld.';
 }
 
 async function saveShopForm(e) {
