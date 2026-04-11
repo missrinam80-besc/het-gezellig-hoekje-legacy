@@ -10,12 +10,14 @@ const APP = {
   ingredientsMap: new Map(),
   processedMap: new Map(),
   recipesMap: new Map(),
-  imagesMap: new Map()
+  imagesMap: new Map(),
+  stockLogs: []
 };
 
 const PAGE_META = {
   dashboard: { title: 'Dashboard', intro: '' },
   ingredients: { title: 'Ingrediënten', intro: 'Beheer grondstoffen, prijsgegevens en afbeeldingen.' },
+  processed: { title: 'Verwerkte producten', intro: 'Maak tussenproducten op basis van grondstoffen of andere verwerkte items.' },
   recipes: { title: 'Recepten', intro: 'Maak recepten, bereken calorieën, kostprijs en winst, en bepaal of ze zichtbaar zijn op de menukaart.' },
   boxes: { title: 'Boxen', intro: 'Stel boxen samen op basis van bestaande recepten en bereken automatisch verkoopprijs en winst.' },
   stock: { title: 'Stock & Winkellijst', intro: 'Werk met een vaste dagplanning, bereken inkopen en bekijk de verwachte winst.' },
@@ -223,6 +225,7 @@ async function loadAllData() {
   APP.processedMap = new Map((APP.data.processedProducts || []).map(i => [i.id, i]));
   APP.recipesMap = new Map((APP.data.recipes || []).map(r => [r.id, r]));
   APP.imagesMap = new Map((APP.data.images || []).map(i => [i.id, i]));
+  APP.stockLogs = APP.data.stockLogs || [];
   fillHeader();
   setStatusBadge(true);
   setLiveStatus('ok', 'Live gekoppeld');
@@ -252,6 +255,68 @@ function safeNumber(v) {
   const n = Number(v || 0);
   return Number.isFinite(n) ? n : 0;
 }
+
+function collectReferences() {
+  const refs = {
+    ingredients: new Map(),
+    processedProducts: new Map(),
+    recipes: new Map(),
+    images: new Map()
+  };
+
+  const pushRef = (map, id, label) => {
+    if (!id) return;
+    if (!map.has(id)) map.set(id, []);
+    map.get(id).push(label);
+  };
+
+  (APP.data.processedProducts || []).forEach(item => {
+    pushRef(refs.ingredients, item.sourceItem1, `Verwerkt product: ${item.name}`);
+    pushRef(refs.ingredients, item.sourceItem2, `Verwerkt product: ${item.name}`);
+    pushRef(refs.processedProducts, item.sourceItem1, `Verwerkt product: ${item.name}`);
+    pushRef(refs.processedProducts, item.sourceItem2, `Verwerkt product: ${item.name}`);
+  });
+
+  (APP.data.recipes || []).forEach(recipe => {
+    (recipe.ingredients || []).forEach(line => {
+      pushRef(refs.ingredients, line.id, `Recept: ${recipe.name}`);
+      pushRef(refs.processedProducts, line.id, `Recept: ${recipe.name}`);
+    });
+  });
+
+  (APP.data.boxes || []).forEach(box => {
+    (box.items || []).forEach(id => pushRef(refs.recipes, id, `Box: ${box.name}`));
+  });
+
+  const imageSlots = [
+    ...(APP.data.ingredients || []).map(i => ({ image: i.image, label: `Ingrediënt: ${i.name}` })),
+    ...(APP.data.recipes || []).map(i => ({ image: i.image, label: `Recept: ${i.name}` })),
+    ...(APP.data.boxes || []).map(i => ({ image: i.image, label: `Box: ${i.name}` })),
+    ...(APP.data.menuSettings || [])
+      .filter(row => ['menu_logo_image', 'menu_background_image'].includes(row.key))
+      .map(row => ({ image: row.value, label: row.key === 'menu_logo_image' ? 'Shoplogo' : 'Menuachtergrond' }))
+  ];
+  imageSlots.forEach(slot => pushRef(refs.images, slot.image, slot.label));
+
+  return refs;
+}
+
+function dependencySummary(kind, id) {
+  const refs = collectReferences();
+  return refs[kind]?.get(id) || [];
+}
+
+function ensureRemovable(kind, id, label) {
+  const refs = dependencySummary(kind, id);
+  if (!refs.length) return true;
+  alert(`${label} kan niet verwijderd worden omdat dit nog in gebruik is:\n\n- ${refs.join('\n- ')}`);
+  return false;
+}
+
+function showError(err, fallback = 'Er liep iets mis.') {
+  alert(`${fallback}\n\n${err?.message || err || 'Onbekende fout'}`);
+}
+
 
 function unitMetrics(itemId, stack = new Set()) {
   const raw = ingredientById(itemId);
@@ -416,7 +481,7 @@ function navHref(key) {
 function renderNav() {
   const nav = document.getElementById('nav');
   if (!nav) return;
-  const items = ['dashboard', 'ingredients', 'recipes', 'boxes', 'stock', 'menu', 'images', 'settings'];
+  const items = ['dashboard', 'ingredients', 'processed', 'recipes', 'boxes', 'stock', 'menu', 'images', 'settings'];
   nav.innerHTML = items.map(key =>
     `<a class="nav-link ${APP.page === key ? 'active' : ''}" href="${navHref(key)}">${esc(PAGE_META[key].title)}</a>`
   ).join('');
@@ -691,38 +756,220 @@ async function saveIngredientForm(e) {
   e.preventDefault();
   const form = e.currentTarget;
 
-  const generatedId = form.dataset.editingId || generateUniqueIngredientId(form.elements.name.value.trim());
+  try {
+    const generatedId = form.dataset.editingId || generateUniqueIngredientId(form.elements.name.value.trim());
 
-  const data = {
-    id: generatedId,
-    name: form.elements.name.value.trim(),
-    type: form.elements.type.value,
-    category: form.elements.category.value.trim(),
-    supplier: form.elements.supplier.value,
-    unit: form.elements.unit.value.trim() || 'stuk',
-    price: Number(form.elements.price.value || 0),
-    stock: Number(form.elements.stock.value || 0),
-    minStock: Number(form.elements.minStock.value || 0),
-    caloriesPerProcessedPiece: Number(form.elements.caloriesPerProcessedPiece.value || 0),
-    processedYield: Number(form.elements.processedYield.value || 0),
-    pricePerProcessedPiece: Number(form.elements.pricePerProcessedPiece.value || 0),
-    weightPerPieceG: Number(form.elements.weightPerPieceG.value || 0),
-    pricePerCalorie: Number(form.elements.pricePerCalorie.value || 0),
-    note: form.elements.note.value.trim(),
-    image: document.getElementById('ingredientImage').value,
-    active: true
-  };
+    const data = {
+      id: generatedId,
+      name: form.elements.name.value.trim(),
+      type: form.elements.type.value,
+      category: form.elements.category.value.trim(),
+      supplier: form.elements.supplier.value,
+      unit: form.elements.unit.value.trim() || 'stuk',
+      price: Number(form.elements.price.value || 0),
+      stock: Number(form.elements.stock.value || 0),
+      minStock: Number(form.elements.minStock.value || 0),
+      caloriesPerProcessedPiece: Number(form.elements.caloriesPerProcessedPiece.value || 0),
+      processedYield: Number(form.elements.processedYield.value || 0),
+      pricePerProcessedPiece: Number(form.elements.pricePerProcessedPiece.value || 0),
+      weightPerPieceG: Number(form.elements.weightPerPieceG.value || 0),
+      pricePerCalorie: Number(form.elements.pricePerCalorie.value || 0),
+      note: form.elements.note.value.trim(),
+      image: document.getElementById('ingredientImage').value,
+      active: true
+    };
 
-  await apiPost('ingredients.save', data);
-  await loadAllData();
-  renderIngredients();
+    await apiPost('ingredients.save', data);
+    await loadAllData();
+    renderIngredients();
+  } catch (err) {
+    showError(err, 'Ingrediënt kon niet opgeslagen worden.');
+  }
 }
 
 async function deleteIngredient(id) {
+  if (!ensureRemovable('ingredients', id, 'Dit ingrediënt')) return;
   if (!confirm('Ingrediënt verwijderen?')) return;
-  await apiPost('ingredients.delete', { id });
-  await loadAllData();
-  renderIngredients();
+  try {
+    await apiPost('ingredients.delete', { id });
+    await loadAllData();
+    renderIngredients();
+  } catch (err) {
+    showError(err, 'Ingrediënt kon niet verwijderd worden.');
+  }
+}
+
+
+
+function processedSourceOptions(current = '') {
+  const rawOptions = (APP.data.ingredients || [])
+    .filter(i => i.active !== false)
+    .map(i => `<option value="${esc(i.id)}" ${current === i.id ? 'selected' : ''}>${esc(i.name)} · grondstof</option>`)
+    .join('');
+  const processedOptions = (APP.data.processedProducts || [])
+    .filter(i => i.active !== false)
+    .map(i => `<option value="${esc(i.id)}" ${current === i.id ? 'selected' : ''}>${esc(i.name)} · verwerkt</option>`)
+    .join('');
+  return `<option value="">Geen</option>${rawOptions ? `<optgroup label="Grondstoffen">${rawOptions}</optgroup>` : ''}${processedOptions ? `<optgroup label="Verwerkte producten">${processedOptions}</optgroup>` : ''}`;
+}
+
+function renderProcessedProducts() {
+  const rows = [...(APP.data.processedProducts || [])].sort((a, b) => a.name.localeCompare(b.name, 'nl'));
+
+  setSidebar(`
+    <div class="panel">
+      <div class="panel-head"><h3>Nieuw verwerkt product</h3></div>
+      <div class="panel-body">
+        <form id="processedForm" class="form-grid">
+          <div class="full"><label>Naam</label><input name="name" id="processedNameInput" required></div>
+          <div><label>Code</label><input name="id" id="processedCodeInput" readonly placeholder="Wordt automatisch gegenereerd"></div>
+          <div><label>Proces type</label><input name="processType" placeholder="snijden, persen, mixen..."></div>
+          <div><label>Bron 1</label><select id="processedSource1">${processedSourceOptions('')}</select></div>
+          <div><label>Aantal bron 1</label><input type="number" min="0" step="0.01" name="sourceAmount1" value="1"></div>
+          <div><label>Bron 2</label><select id="processedSource2">${processedSourceOptions('')}</select></div>
+          <div><label>Aantal bron 2</label><input type="number" min="0" step="0.01" name="sourceAmount2" value="0"></div>
+          <div><label>Yield</label><input type="number" min="1" step="0.01" name="yield" value="1"></div>
+          <div><label>Eenheid</label><input name="unit" value="stuk"></div>
+          <div class="full"><label>Notitie</label><textarea name="notes"></textarea></div>
+          <div class="full row wrap">
+            <label class="row" style="width:auto;"><input type="checkbox" name="active" checked style="width:auto;"> actief</label>
+          </div>
+          <div class="full row"><button class="btn" type="submit">Opslaan</button><button class="btn secondary" type="button" id="processedResetBtn">Reset</button></div>
+        </form>
+      </div>
+    </div>
+  `);
+
+  setWorkspace(`
+    <div class="panel">
+      <div class="panel-head"><h2>Verwerkte producten</h2><div class="pill">${rows.length} items</div></div>
+      <div class="panel-body table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>Proces</th>
+              <th>Bronnen</th>
+              <th>Yield</th>
+              <th>Eenheid</th>
+              <th>Kost / eenheid</th>
+              <th>Cal / eenheid</th>
+              <th>Status</th>
+              <th>Acties</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(item => {
+              const metrics = unitMetrics(item.id);
+              const refs = dependencySummary('processedProducts', item.id);
+              return `
+                <tr>
+                  <td>${esc(item.name)}</td>
+                  <td>${esc(item.processType || '')}</td>
+                  <td>
+                    ${item.sourceItem1 ? `${esc(itemDisplayName(item.sourceItem1))} × ${safeNumber(item.sourceAmount1)}` : ''}
+                    ${item.sourceItem2 ? `<br>${esc(itemDisplayName(item.sourceItem2))} × ${safeNumber(item.sourceAmount2)}` : ''}
+                  </td>
+                  <td>${safeNumber(item.yield)}</td>
+                  <td>${esc(item.unit || '')}</td>
+                  <td>${money(metrics.cost)}</td>
+                  <td>${metrics.calories.toFixed(0)}</td>
+                  <td class="${item.active === false ? 'status-bad' : 'status-ok'}">${item.active === false ? 'Inactief' : 'Actief'}${refs.length ? `<div class="small muted">${refs.length} koppelingen</div>` : ''}</td>
+                  <td>
+                    <div class="actions">
+                      <button class="btn secondary" data-processed-edit="${item.id}">Bewerk</button>
+                      <button class="btn danger" data-processed-delete="${item.id}">Verwijder</button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `);
+
+  const form = document.getElementById('processedForm');
+  const nameInput = document.getElementById('processedNameInput');
+  const codeInput = document.getElementById('processedCodeInput');
+  const refreshAutoCode = () => {
+    if (form.dataset.editingId) return;
+    let candidate = slugify(nameInput.value.trim()) || `processed_${Date.now()}`;
+    let i = 2;
+    while (APP.processedMap.has(candidate)) {
+      candidate = `${slugify(nameInput.value.trim()) || 'processed'}_${i}`;
+      i += 1;
+    }
+    codeInput.value = candidate;
+  };
+  nameInput.addEventListener('input', refreshAutoCode);
+  refreshAutoCode();
+
+  form.onsubmit = saveProcessedForm;
+  document.getElementById('processedResetBtn').onclick = () => renderProcessedProducts();
+  document.querySelectorAll('[data-processed-edit]').forEach(btn => btn.onclick = () => fillProcessedForm(btn.dataset.processedEdit));
+  document.querySelectorAll('[data-processed-delete]').forEach(btn => btn.onclick = () => deleteProcessedProduct(btn.dataset.processedDelete));
+}
+
+function fillProcessedForm(id) {
+  const item = processedProductById(id);
+  if (!item) return;
+  const form = document.getElementById('processedForm');
+  form.dataset.editingId = item.id;
+  form.elements.name.value = item.name || '';
+  form.elements.id.value = item.id || '';
+  form.elements.processType.value = item.processType || '';
+  form.elements.sourceAmount1.value = safeNumber(item.sourceAmount1);
+  form.elements.sourceAmount2.value = safeNumber(item.sourceAmount2);
+  form.elements.yield.value = safeNumber(item.yield || 1);
+  form.elements.unit.value = item.unit || 'stuk';
+  form.elements.notes.value = item.notes || '';
+  form.elements.active.checked = item.active !== false;
+  document.getElementById('processedSource1').innerHTML = processedSourceOptions(item.sourceItem1 || '');
+  document.getElementById('processedSource2').innerHTML = processedSourceOptions(item.sourceItem2 || '');
+}
+
+async function saveProcessedForm(e) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const id = form.dataset.editingId || (document.getElementById('processedCodeInput').value || slugify(form.elements.name.value.trim()));
+  const sourceItem1 = document.getElementById('processedSource1').value;
+  const sourceItem2 = document.getElementById('processedSource2').value;
+  if (!sourceItem1) return alert('Bron 1 is verplicht.');
+  if (sourceItem1 === id || sourceItem2 === id) return alert('Een verwerkt product kan zichzelf niet als bron gebruiken.');
+
+  try {
+    await apiPost('processed_products.save', {
+      id,
+      name: form.elements.name.value.trim(),
+      processType: form.elements.processType.value.trim(),
+      sourceItem1,
+      sourceAmount1: Number(form.elements.sourceAmount1.value || 0),
+      sourceItem2,
+      sourceAmount2: Number(form.elements.sourceAmount2.value || 0),
+      yield: Number(form.elements.yield.value || 1),
+      unit: form.elements.unit.value.trim() || 'stuk',
+      notes: form.elements.notes.value.trim(),
+      active: form.elements.active.checked
+    });
+    await loadAllData();
+    renderProcessedProducts();
+  } catch (err) {
+    showError(err, 'Verwerkt product kon niet opgeslagen worden.');
+  }
+}
+
+async function deleteProcessedProduct(id) {
+  if (!ensureRemovable('processedProducts', id, 'Dit verwerkte product')) return;
+  if (!confirm('Verwerkt product verwijderen?')) return;
+  try {
+    await apiPost('processed_products.delete', { id });
+    await loadAllData();
+    renderProcessedProducts();
+  } catch (err) {
+    showError(err, 'Verwerkt product kon niet verwijderd worden.');
+  }
 }
 
 function recipeIngredientOptions(_productType, current = '') {
@@ -947,6 +1194,18 @@ function fillRecipeForm(id) {
   updateRecipeComputed();
 }
 
+async function deleteRecipe(id) {
+  if (!ensureRemovable('recipes', id, 'Dit recept')) return;
+  if (!confirm('Recept verwijderen?')) return;
+  try {
+    await apiPost('recipes.delete', { id });
+    await loadAllData();
+    renderRecipes();
+  } catch (err) {
+    showError(err, 'Recept kon niet verwijderd worden.');
+  }
+}
+
 function boxLine(prefill = '') {
   const options = (APP.data.recipes || [])
     .filter(r => asBool(r.active))
@@ -1109,35 +1368,43 @@ async function saveBoxForm(e) {
   const form = e.currentTarget;
   const manual = form.elements.manualPrice.checked;
 
-  const data = {
-    id: form.dataset.editingId || slugify(form.elements.name.value.trim()),
-    name: form.elements.name.value.trim(),
-    theme: form.elements.theme.value.trim(),
-    promo: form.elements.promo.value.trim(),
-    discountPct: Number(form.elements.discountPct.value || 0),
-    manualPrice: manual,
-    manualPriceValue: manual ? Number(form.elements.price.value || 0) : 0,
-    price: manual ? Number(form.elements.price.value || 0) : 0,
-    active: true,
-    image: document.getElementById('boxImage').value,
-    items: [...document.querySelectorAll('.boxRecipeSelect')].map(el => el.value).filter(Boolean)
-  };
+  try {
+    const data = {
+      id: form.dataset.editingId || slugify(form.elements.name.value.trim()),
+      name: form.elements.name.value.trim(),
+      theme: form.elements.theme.value.trim(),
+      promo: form.elements.promo.value.trim(),
+      discountPct: Number(form.elements.discountPct.value || 0),
+      manualPrice: manual,
+      manualPriceValue: manual ? Number(form.elements.price.value || 0) : 0,
+      price: manual ? Number(form.elements.price.value || 0) : 0,
+      active: true,
+      image: document.getElementById('boxImage').value,
+      items: [...document.querySelectorAll('.boxRecipeSelect')].map(el => el.value).filter(Boolean)
+    };
 
-  if (!manual) {
-    data.price = computeBoxPrice(data);
-    data.manualPriceValue = 0;
+    if (!manual) {
+      data.price = computeBoxPrice(data);
+      data.manualPriceValue = 0;
+    }
+
+    await apiPost('boxes.save', data);
+    await loadAllData();
+    renderBoxes();
+  } catch (err) {
+    showError(err, 'Box kon niet opgeslagen worden.');
   }
-
-  await apiPost('boxes.save', data);
-  await loadAllData();
-  renderBoxes();
 }
 
 async function deleteBox(id) {
   if (!confirm('Box verwijderen?')) return;
-  await apiPost('boxes.delete', { id });
-  await loadAllData();
-  renderBoxes();
+  try {
+    await apiPost('boxes.delete', { id });
+    await loadAllData();
+    renderBoxes();
+  } catch (err) {
+    showError(err, 'Box kon niet verwijderd worden.');
+  }
 }
 
 
@@ -1243,31 +1510,45 @@ function renderPlanningList() {
 
 function buildClipboardText(summary) {
   const supplierMap = {};
-  summary.rows.forEach(r => {
-    (supplierMap[r.supplier] ||= []).push(`${r.name}: ${r.buy}`);
+  summary.rows.filter(r => r.buy > 0).forEach(r => {
+    (supplierMap[r.supplier] ||= []).push(`- ${r.name}: **${r.buy}** — ${money(r.subtotal)}`);
   });
 
   return [
-    'Winkellijst',
-    ...summary.rows.filter(r => r.buy > 0).map(r => `- ${r.name}: ${r.buy} (${r.supplier}) - ${money(r.subtotal)}`),
+    '# Winkellijst',
     '',
-    'Aankoop per locatie',
-    ...Object.entries(supplierMap).map(([k, v]) => `${k}: ${v.join(', ')}`),
+    ...summary.rows.filter(r => r.buy > 0).map(r => `- ${r.name}: **${r.buy}** (${r.supplier}) — ${money(r.subtotal)}`),
     '',
-    `Totale aankoopkost: ${money(summary.totalBuy)}`,
-    `Te verwachten omzet: ${money(summary.expectedRevenue)}`,
-    `Te verwachten winst: ${money(summary.expectedProfit)}`
-  ].join('\\n');
+    '## Aankoop per locatie',
+    ...Object.entries(supplierMap).flatMap(([k, v]) => [`### ${k}`, ...v, '']),
+    `**Totale aankoopkost:** ${money(summary.totalBuy)}`,
+    `**Te verwachten omzet:** ${money(summary.expectedRevenue)}`,
+    `**Te verwachten winst:** ${money(summary.expectedProfit)}`
+  ].join('\n');
 }
 
 async function copyStockSummary() {
   const summary = computePlanRows();
-  await navigator.clipboard.writeText(buildClipboardText(summary));
-  const btn = document.getElementById('copyStockBtn');
-  if (btn) {
-    const old = btn.textContent;
-    btn.textContent = 'Gekopieerd';
-    setTimeout(() => btn.textContent = old, 1500);
+  const text = buildClipboardText(summary);
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const area = document.createElement('textarea');
+      area.value = text;
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+    }
+    const btn = document.getElementById('copyStockBtn');
+    if (btn) {
+      const old = btn.textContent;
+      btn.textContent = 'Gekopieerd';
+      setTimeout(() => btn.textContent = old, 1500);
+    }
+  } catch (err) {
+    showError(err, 'Markdown kon niet gekopieerd worden.');
   }
 }
 
@@ -1293,6 +1574,38 @@ function renderStock() {
           <button class="btn secondary" id="clearPlanBtn">Leegmaken</button>
         </div>
         <div class="hint">Werk hier je vaste dagplanning bij. De winkellijst houdt automatisch rekening met de huidige stock.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Stockmutaties</h3></div>
+      <div class="panel-body stack">
+        <div class="row">
+          <button class="btn secondary" id="applyPurchasesBtn" type="button">Aankopen boeken</button>
+          <button class="btn secondary" id="consumePlanBtn" type="button">Planning verbruiken</button>
+        </div>
+        <div class="hint">Boek hiermee de winkellijst in je stock of trek de gebruikte grondstoffen af na productie/verkoop.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Manuele stockcorrectie</h3></div>
+      <div class="panel-body">
+        <form id="stockAdjustForm" class="stack">
+          <div>
+            <label>Ingrediënt</label>
+            <select name="itemId">${(APP.data.ingredients || []).map(i => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('')}</select>
+          </div>
+          <div>
+            <label>Delta</label>
+            <input type="number" step="1" name="delta" value="0">
+          </div>
+          <div>
+            <label>Notitie</label>
+            <input name="note" placeholder="bv. inventaris, breuk, levering">
+          </div>
+          <button class="btn" type="submit">Correctie opslaan</button>
+        </form>
       </div>
     </div>
   `);
@@ -1363,6 +1676,10 @@ function renderStock() {
             <h4>Verwerking</h4>
             <div class="muted">${summary.missing?.length ? esc(summary.missing.join(' · ')) : 'Verwerkte producten zijn meegerekend in kost en stock.'}</div>
           </div>
+          <div class="item-card">
+            <h4>Laatste stocklogs</h4>
+            <div class="muted small">${(APP.stockLogs || []).slice(0, 6).map(log => `${esc(log.timestamp || '')} · ${esc(log.action || '')} · ${esc(itemDisplayName(log.itemId || log.item_id))} · ${safeNumber(log.delta) > 0 ? '+' : ''}${safeNumber(log.delta)}`).join('<br>') || 'Nog geen logs.'}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1371,6 +1688,12 @@ function renderStock() {
   document.getElementById('addPlanBtn').onclick = savePlan;
   document.getElementById('clearPlanBtn').onclick = clearPlan;
   document.getElementById('copyStockBtn').onclick = copyStockSummary;
+  const applyPurchasesBtn = document.getElementById('applyPurchasesBtn');
+  const consumePlanBtn = document.getElementById('consumePlanBtn');
+  const stockAdjustForm = document.getElementById('stockAdjustForm');
+  if (applyPurchasesBtn) applyPurchasesBtn.onclick = applyPurchaseAdjustments;
+  if (consumePlanBtn) consumePlanBtn.onclick = applyConsumptionAdjustments;
+  if (stockAdjustForm) stockAdjustForm.onsubmit = saveStockAdjustment;
   renderPlanningList();
 }
 
@@ -1410,6 +1733,41 @@ async function updatePlanQty(idx, amount) {
   await apiPost('plan.save', plan);
   await loadAllData();
   renderStock();
+}
+
+async function applyStockAdjustments(adjustments, action, note) {
+  if (!adjustments.length) return alert('Er zijn geen stockmutaties om te boeken.');
+  try {
+    await apiPost('stock.adjust', { action, note, adjustments });
+    await loadAllData();
+    renderStock();
+  } catch (err) {
+    showError(err, 'Stockmutatie kon niet opgeslagen worden.');
+  }
+}
+
+async function applyPurchaseAdjustments() {
+  const summary = computePlanRows();
+  const adjustments = summary.rows.filter(r => r.buy > 0).map(r => ({ itemId: r.id, delta: r.buy, note: 'Aankoop vanuit planning' }));
+  if (!adjustments.length) return alert('Er zijn geen aankopen nodig.');
+  if (!confirm('Alle aankopen uit de huidige winkellijst in stock boeken?')) return;
+  await applyStockAdjustments(adjustments, 'purchase', 'Aankoop vanuit winkellijst');
+}
+
+async function applyConsumptionAdjustments() {
+  const summary = computePlanRows();
+  const adjustments = summary.rows.filter(r => r.need > 0).map(r => ({ itemId: r.id, delta: -r.need, note: 'Verbruik vanuit planning' }));
+  if (!adjustments.length) return alert('Er is geen verbruik om te boeken.');
+  if (!confirm('Alle grondstoffen uit de huidige planning van de stock aftrekken?')) return;
+  await applyStockAdjustments(adjustments, 'consume', 'Verbruik vanuit planning');
+}
+
+async function saveStockAdjustment(e) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const delta = Number(form.elements.delta.value || 0);
+  if (!delta) return alert('Delta mag niet 0 zijn.');
+  await applyStockAdjustments([{ itemId: form.elements.itemId.value, delta, note: form.elements.note.value.trim() || 'Manuele correctie' }], 'manual_adjust', form.elements.note.value.trim() || 'Manuele correctie');
 }
 
 function applyMenuStyles() {
@@ -1584,6 +1942,8 @@ async function downloadMenuPng() {
     link.href = exportCanvas.toDataURL('image/png');
     link.download = `${safeName}_menukaart.png`;
     link.click();
+  } catch (err) {
+    showError(err, 'De PNG-download is mislukt.');
   } finally {
     if (button) {
       button.disabled = false;
@@ -1722,31 +2082,40 @@ function renderImages() {
 async function saveImageForm(e) {
   e.preventDefault();
   const f = e.currentTarget;
-  let dataUrl = f.elements.data_url.value.trim();
+  try {
+    let dataUrl = f.elements.data_url.value.trim();
 
-  const file = document.getElementById('imageUpload').files?.[0];
-  if (file) dataUrl = await readFileAsDataUrl(file);
+    const file = document.getElementById('imageUpload').files?.[0];
+    if (file) dataUrl = await readFileAsDataUrl(file);
 
-  const data = {
-    id: f.dataset.editingId || f.elements.id.value.trim(),
-    name: f.elements.name.value.trim(),
-    scope: f.elements.scope.value,
-    fileName: f.elements.file_name.value.trim(),
-    dataUrl,
-    active: true,
-    notes: f.elements.notes.value.trim()
-  };
+    const data = {
+      id: f.dataset.editingId || f.elements.id.value.trim(),
+      name: f.elements.name.value.trim(),
+      scope: f.elements.scope.value,
+      fileName: f.elements.file_name.value.trim(),
+      dataUrl,
+      active: true,
+      notes: f.elements.notes.value.trim()
+    };
 
-  await apiPost('images.save', data);
-  await loadAllData();
-  renderImages();
+    await apiPost('images.save', data);
+    await loadAllData();
+    renderImages();
+  } catch (err) {
+    showError(err, 'Afbeelding kon niet opgeslagen worden.');
+  }
 }
 
 async function deleteImage(id) {
+  if (!ensureRemovable('images', id, 'Deze afbeelding')) return;
   if (!confirm('Afbeelding verwijderen?')) return;
-  await apiPost('images.delete', { id });
-  await loadAllData();
-  renderImages();
+  try {
+    await apiPost('images.delete', { id });
+    await loadAllData();
+    renderImages();
+  } catch (err) {
+    showError(err, 'Afbeelding kon niet verwijderd worden.');
+  }
 }
 
 function renderSettings() {
@@ -1769,10 +2138,21 @@ function renderSettings() {
           <label>Logo</label>
           ${imageSelect('shopLogo', 'logo', shop.logo || '')}
 
+          <label>Menucategorieën</label>
+          <textarea name="menuCategories" placeholder="Koffie, Thee, ...">${esc((settingsMap().menu_categories || '').trim())}</textarea>
+
           <div class="row">
             <button class="btn" type="submit">Opslaan</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Sheets bootstrap</h3></div>
+      <div class="panel-body stack">
+        <div class="hint">Gebruik dit alleen wanneer je de spreadsheetstructuur opnieuw wilt initialiseren.</div>
+        <button class="btn secondary" id="bootstrapSheetsBtn" type="button">Controleer / herstel sheets</button>
       </div>
     </div>
 
@@ -1815,6 +2195,8 @@ function renderSettings() {
   const clearTokenBtn = document.getElementById('clearTokenBtn');
   if (setTokenBtn) setTokenBtn.onclick = () => { promptWriteToken('Voer de admin token in.'); updateTokenState(); };
   if (clearTokenBtn) clearTokenBtn.onclick = () => { clearWriteToken(); updateTokenState(); };
+  const bootstrapBtn = document.getElementById('bootstrapSheetsBtn');
+  if (bootstrapBtn) bootstrapBtn.onclick = bootstrapSheets;
   updateTokenState();
 }
 
@@ -1834,13 +2216,25 @@ async function saveShopForm(e) {
     brand_name: f.elements.name.value.trim(),
     subtitle: f.elements.subtitle.value.trim(),
     tagline: f.elements.tagline.value.trim(),
-    menu_logo_image: document.getElementById('shopLogo').value
+    menu_logo_image: document.getElementById('shopLogo').value,
+    menu_categories: f.elements.menuCategories.value.trim()
   };
 
   const rows = Object.entries(merged).map(([key, value]) => ({ key, value }));
   await apiPost('menuSettings.save', rows);
   await loadAllData();
   renderSettings();
+}
+
+async function bootstrapSheets() {
+  if (!confirm('De sheetstructuur controleren / herstellen?')) return;
+  try {
+    await apiPost('bootstrap.sheets', {});
+    await loadAllData();
+    alert('Sheets zijn gecontroleerd / hersteld.');
+  } catch (err) {
+    showError(err, 'Bootstrap van sheets is mislukt.');
+  }
 }
 
 async function testApi() {
@@ -1867,6 +2261,7 @@ async function renderPage() {
 
   if (APP.page === 'dashboard') renderDashboard();
   if (APP.page === 'ingredients') renderIngredients();
+  if (APP.page === 'processed') renderProcessedProducts();
   if (APP.page === 'recipes') renderRecipes();
   if (APP.page === 'boxes') renderBoxes();
   if (APP.page === 'stock') renderStock();
